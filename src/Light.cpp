@@ -1,0 +1,42 @@
+#include "Light.hpp"
+
+int Light::pointLightCount = 0;
+
+Light::Light( const glm::vec3& position, const glm::vec3& ambient, const glm::vec3& diffuse, const glm::vec3& specular, eLightType type ) : position(position), ambient(ambient), diffuse(diffuse), specular(specular), type(type), lconst(1), linear(0.09), quadratic(0.032) {
+    if (type == eLightType::point) {
+        this->id = this->pointLightCount;
+        this->pointLightCount++;
+    }
+}
+
+Light::Light( const glm::vec3& position, const glm::vec3& ambient, const glm::vec3& diffuse, const glm::vec3& specular, float lconst, float linear, float quadratic, eLightType type ) : position(position), ambient(ambient), diffuse(diffuse), specular(specular), type(type), lconst(lconst), linear(linear), quadratic(quadratic) {
+    if (type == eLightType::point) {
+        this->id = this->pointLightCount;
+        this->pointLightCount++;
+    }
+}
+
+Light::~Light( void ) {
+    if (type == eLightType::point)
+        this->pointLightCount--;
+}
+
+void    Light::render( Shader shader ) {
+    if (this->type == eLightType::directional) {
+        shader.setVec3UniformValue("directionalLight.position", this->position);
+        shader.setVec3UniformValue("directionalLight.ambient", this->ambient);
+        shader.setVec3UniformValue("directionalLight.diffuse", this->diffuse);
+        shader.setVec3UniformValue("directionalLight.specular", this->specular);
+    }
+    else if (this->type == eLightType::point) {
+        std::string var = "pointLights[";
+        var += std::to_string(this->id) + "].";
+        shader.setVec3UniformValue((var+std::string("position")).c_str(), this->position);
+        shader.setVec3UniformValue((var+std::string("ambient")).c_str(), this->ambient);
+        shader.setVec3UniformValue((var+std::string("diffuse")).c_str(), this->diffuse);
+        shader.setVec3UniformValue((var+std::string("specular")).c_str(), this->specular);
+        shader.setFloatUniformValue((var+std::string("const")).c_str(), this->lconst);
+        shader.setFloatUniformValue((var+std::string("linear")).c_str(), this->linear);
+        shader.setFloatUniformValue((var+std::string("quadratic")).c_str(), this->quadratic);
+    }
+}
