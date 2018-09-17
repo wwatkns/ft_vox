@@ -38,7 +38,8 @@ out vec4 FragColor;
 
 /* input variables */
 // in vec3 FragPos;
-// in vec3 Normal;
+in vec3 Normal;
+flat in int Id;
 // in vec2 TexCoords;
 // in vec4 FragPosLightSpace;
 
@@ -51,7 +52,7 @@ out vec4 FragColor;
 // uniform sampler2D texture_specular1;
 // uniform sampler2D texture_emissive1;
 
-uniform vec3 viewPos;
+uniform vec3 cameraPos;
 // uniform sMaterial material;
 // uniform sDirectionalLight directionalLight;
 // uniform sPointLight pointLights[MAX_POINT_LIGHTS];
@@ -72,8 +73,9 @@ uniform vec3 viewPos;
 
 
 void main() {
+    // vec3 fragPos = vec3(model * vec4(gl_Position, 1.0));
     // handleStates();
-    // vec3 viewDir = normalize(viewPos - FragPos);
+    // vec3 viewDir = normalize(cameraPos - FragPos);
 
     // vec3 result = computeDirectionalLight(directionalLight, gNormal, viewDir, FragPosLightSpace);
     // for (int i = 0; i < nPointLights && i < MAX_POINT_LIGHTS; ++i)
@@ -82,7 +84,7 @@ void main() {
     // FragColor = vec4(result, 1.0f);
     // FragColor.w = material.opacity;
 
-    FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+    FragColor = vec4(Normal * 0.5 + 0.5, 1.0);
 }
 
 // void    handleStates( void ) {

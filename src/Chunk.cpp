@@ -14,6 +14,7 @@ Chunk::~Chunk( void ) {
 void    Chunk::render( Shader shader ) {
     /* set transform matrix */
     shader.setMat4UniformValue("model", this->transform);
+    // create a mvp in chunk
     /* render */
     glBindVertexArray(this->vao);
     glDrawArrays(GL_POINTS, 0, this->voxels.size());
@@ -30,8 +31,11 @@ void    Chunk::setup( int mode ) {
     // position attribute
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(tPoint), static_cast<GLvoid*>(0));
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    // id attribute
+    glEnableVertexAttribArray(1);
+	glVertexAttribIPointer(1, 1, GL_UNSIGNED_BYTE, sizeof(tPoint), reinterpret_cast<GLvoid*>(offsetof(tPoint, id)));
 
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 }
 

@@ -10,7 +10,7 @@ Env::Env( void ) {
             throw Exception::InitError("glad initialization failed");
         this->controller = new Controller(this->window.ptr);
 
-        this->terrain = new Terrain(4, glm::vec3(16, 128, 16));
+        this->terrain = new Terrain(12, glm::vec3(16, 40, 16));
 
         this->skyboxTexture = loadCubemap(std::vector<std::string>{{
             "./resource/CloudyLightRays/CloudyLightRaysLeft2048.png",

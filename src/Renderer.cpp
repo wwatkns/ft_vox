@@ -7,7 +7,6 @@ camera(80, (float)env->getWindow().width / (float)env->getWindow().height) {
     this->shader["default"] = new Shader("./shader/vertex/default.vert.glsl", "./shader/geometry/default.geom.glsl", "./shader/fragment/default.frag.glsl");
     this->shader["skybox"]  = new Shader("./shader/vertex/skybox.vert.glsl", "./shader/fragment/skybox.frag.glsl");
     this->shader["shadowMap"] = new Shader("./shader/vertex/shadowMap.vert.glsl", "./shader/fragment/shadowMap.frag.glsl");
-    this->shader["generateChunk"] = new Shader("./shader/vertex/screenQuad.vert.glsl", "./shader/fragment/generateChunk.frag.glsl");
     this->lastTime = std::chrono::steady_clock::now();
     this->framerate = 60.0;
 
@@ -48,6 +47,8 @@ void	Renderer::loop( void ) {
     glEnable(GL_DEPTH_TEST); /* z-buffering */
     glEnable(GL_FRAMEBUFFER_SRGB); /* gamma correction */
     glEnable(GL_BLEND); /* transparency */
+    glEnable(GL_CULL_FACE); /* face culling (back faces are not rendered) */
+    glCullFace(GL_BACK);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     while (!glfwWindowShouldClose(this->env->getWindow().ptr)) {
         glfwPollEvents();
@@ -134,7 +135,7 @@ void    Renderer::renderMeshes( void ) {
     this->shader["default"]->use();
     this->shader["default"]->setMat4UniformValue("projection", this->camera.getProjectionMatrix());
     this->shader["default"]->setMat4UniformValue("view", this->camera.getViewMatrix());
-    this->shader["default"]->setVec3UniformValue("viewPos", this->camera.getPosition());
+    this->shader["default"]->setVec3UniformValue("cameraPos", this->camera.getPosition());
     // this->shader["default"]->setMat4UniformValue("lightSpaceMat", this->lightSpaceMat);
     // glActiveTexture(GL_TEXTURE0);
     // this->shader["default"]->setIntUniformValue("shadowMap", 0);

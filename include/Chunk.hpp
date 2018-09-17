@@ -19,7 +19,7 @@
 
 typedef struct  sPoint {
     glm::vec3   position;
-    // uint8_t     id;
+    uint8_t     id;
 }               tPoint;
 
 // typedef struct  sVoxel {
