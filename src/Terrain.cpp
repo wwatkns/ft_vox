@@ -37,7 +37,7 @@ void    Terrain::generateChunk( const glm::vec3& position ) {
     for (int y = 0; y < this->chunkSize.z; ++y)
         for (int x = 0; x < this->chunkSize.x; ++x) {
             int index = x + y * this->chunkSize.x;
-            int h = index + this->chunkSize.x * this->chunkSize.z * std::round(this->dataBuffer[index] * this->chunkSize.y);
+            int h = index + this->chunkSize.x * this->chunkSize.z * std::min(std::round(this->dataBuffer[index] * this->chunkSize.y), this->chunkSize.y - 1);
             std::cout << "index : " << h << std::endl;
             // data_b[h] = 1; /* fill point */
             for (int f = h; f >= 0; f -= this->chunkSize.x * this->chunkSize.z) { data_b[f] = 1; } /* fill point and below */
@@ -52,6 +52,8 @@ void    Terrain::generateChunk( const glm::vec3& position ) {
                     voxels.push_back( { glm::vec3(x, y, z), (uint8_t)data_b[index] } );
             }
     this->chunks.push_back( new Chunk(voxels, position) );
+    free(data_b);
+    data_b = nullptr;
 }
 
 void    Terrain::renderChunkGeneration( const glm::vec3& position, float* data ) {

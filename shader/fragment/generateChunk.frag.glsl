@@ -65,12 +65,18 @@ uniform sampler2D noiseSampler;
 
 void    main() {
     vec2 uv = vec2(TexCoords.x, 1.0 - TexCoords.y);
+    vec2 c_uv = uv - 1. / (chunkSize.xz * 2.0);
+
+    vec3 chunk = chunkPosition / chunkSize;
 
     // float elevation = sin(uv.x * chunkSize.x * PI) * sin(uv.y * chunkSize.z * PI) * 0.5 + 0.5;
     // float elevation = floor(uv.y * 4.) / 4.;
 
-    FragColor.r = uv.x - 1. / (chunkSize.x * 2.0);
-    FragColor.r *= uv.y - 1. / (chunkSize.y * 2.0);
+    // FragColor.r  = uv.x - 1. / (chunkSize.x * 2.0);
+    // FragColor.r *= uv.y - 1. / (chunkSize.y * 2.0);
+
+    FragColor.r  = sin( (chunk.x - 1.0 + c_uv.x) * PI * 0.5) * 0.5 + 0.5;
+    FragColor.r *= sin( (chunk.z - 1.0 + c_uv.y) * PI * 0.5) * 0.5 + 0.5;
 
     // FragColor.r = fract(uv.y * 256. * chunkSize.y) / chunkSize.y;
     // FragColor = vec4( mod(chunkPosition.x / 4.0, 2.0) * mod(chunkPosition.z / 4.0, 2.0), 0.0, 0.0, 0.0);
