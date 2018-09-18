@@ -10,18 +10,19 @@ Env::Env( void ) {
             throw Exception::InitError("glad initialization failed");
         this->controller = new Controller(this->window.ptr);
 
-        this->terrain = new Terrain(12, glm::vec3(16, 32, 16));
-        // this->terrain = new Terrain(12, glm::vec3(4, 16, 4));
+        this->terrain = new Terrain(6, 48, glm::vec3(16, 16, 16));
+        // this->terrain = new Terrain(12, 32, glm::vec3(16, 32, 16));
+        // this->terrain = new Terrain(10, 32, glm::vec3(4, 16, 4));
 
-        this->skyboxTexture = loadCubemap(std::vector<std::string>{{
-            "./resource/CloudyLightRays/CloudyLightRaysLeft2048.png",
-            "./resource/CloudyLightRays/CloudyLightRaysRight2048.png",
-            "./resource/CloudyLightRays/CloudyLightRaysUp2048.png",
-            "./resource/CloudyLightRays/CloudyLightRaysDown2048.png",
-            "./resource/CloudyLightRays/CloudyLightRaysFront2048.png",
-            "./resource/CloudyLightRays/CloudyLightRaysBack2048.png",
-        }});
-        this->noiseTexture = loadTexture("./resource/RGBAnoiseMedium.png");
+        // this->skyboxTexture = loadCubemap(std::vector<std::string>{{
+        //     "./resource/CloudyLightRays/CloudyLightRaysLeft2048.png",
+        //     "./resource/CloudyLightRays/CloudyLightRaysRight2048.png",
+        //     "./resource/CloudyLightRays/CloudyLightRaysUp2048.png",
+        //     "./resource/CloudyLightRays/CloudyLightRaysDown2048.png",
+        //     "./resource/CloudyLightRays/CloudyLightRaysFront2048.png",
+        //     "./resource/CloudyLightRays/CloudyLightRaysBack2048.png",
+        // }});
+        // this->noiseTexture = loadTexture("./resource/RGBAnoiseMedium.png");
         this->lights = {
             new Light(
                 glm::vec3(30, 30, 18),

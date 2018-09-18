@@ -3,7 +3,7 @@
 
 Renderer::Renderer( Env* env ) :
 env(env),
-camera(80, (float)env->getWindow().width / (float)env->getWindow().height) {
+camera(80, (float)env->getWindow().width / (float)env->getWindow().height, 0.1f, 300.0f) {
     this->shader["default"] = new Shader("./shader/vertex/default.vert.glsl", "./shader/geometry/default.geom.glsl", "./shader/fragment/default.frag.glsl");
     this->shader["skybox"]  = new Shader("./shader/vertex/skybox.vert.glsl", "./shader/fragment/skybox.frag.glsl");
     this->shader["shadowMap"] = new Shader("./shader/vertex/shadowMap.vert.glsl", "./shader/fragment/shadowMap.frag.glsl");
@@ -62,7 +62,7 @@ void	Renderer::loop( void ) {
 
         /* rendering passes */
         // this->updateShadowDepthMap();
-        // this->renderLights();
+        this->renderLights();
         this->renderMeshes();
         // this->renderSkybox();
 
@@ -110,25 +110,15 @@ void	Renderer::loop( void ) {
 //     }
 // }
 
-// void    Renderer::renderLights( void ) {
-//     /* update shader uniforms */
-//     this->shader["default"]->use();
-//     this->shader["default"]->setIntUniformValue("nPointLights", Light::pointLightCount);
+void    Renderer::renderLights( void ) {
+    /* update shader uniforms */
+    this->shader["default"]->use();
+    // this->shader["default"]->setIntUniformValue("nPointLights", Light::pointLightCount);
 
-//     /* render lights for meshes */
-//     for (auto it = this->env->getLights().begin(); it != this->env->getLights().end(); it++)
-//         (*it)->render(*this->shader["default"]);
-
-//     /* render lights for raymarched objects */
-//     this->shader["raymarch"]->use();
-//     for (auto it = this->env->getLights().begin(); it != this->env->getLights().end(); it++)
-//         (*it)->render(*this->shader["raymarch"]);
-    
-//     /* render lights for raymarched object on surfaces */
-//     this->shader["raymarchOnSurface"]->use();
-//     for (auto it = this->env->getLights().begin(); it != this->env->getLights().end(); it++)
-//         (*it)->render(*this->shader["raymarchOnSurface"]);
-// }
+    /* render lights for meshes */
+    for (auto it = this->env->getLights().begin(); it != this->env->getLights().end(); it++)
+        (*it)->render(*this->shader["default"]);
+}
 
 void    Renderer::renderMeshes( void ) {
     /* update shader uniforms */
@@ -143,11 +133,8 @@ void    Renderer::renderMeshes( void ) {
     // glBindTexture(GL_TEXTURE_2D, this->shadowDepthMap.id);
 
     this->env->getTerrain()->render(*this->shader["default"]);
-    // if (this->env->getModels().size() != 0)
-    //     /* render models */
-    //     for (auto it = this->env->getModels().begin(); it != this->env->getModels().end(); it++)
-    //         (*it)->render(*this->shader["default"]);
-
+    // this->env->getTerrain()->update();
+    
     /* copy the depth buffer to a texture (used in raymarch shader for geometry occlusion of raymarched objects) */
     // glBindTexture(GL_TEXTURE_2D, this->depthMap.id);
     // glReadBuffer(GL_FRONT);

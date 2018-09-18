@@ -3,8 +3,10 @@ layout (points) in;
 layout (triangle_strip, max_vertices = 24) out;
 
 in mat4 mvp[];
+in vec3 gFragPos[];
 flat in int gId[];
 
+out vec3 FragPos;
 out vec3 Normal;
 flat out int Id;
 
@@ -23,23 +25,24 @@ void    AddQuad(vec4 center, vec4 dy, vec4 dx) {
 void    main() {
     vec4 center = gl_in[0].gl_Position;
     
-    // 0.95 is tmp
-    vec4 dx = mvp[0][0] / 2.0 * 0.95;
-    vec4 dy = mvp[0][1] / 2.0 * 0.95;
-    vec4 dz = mvp[0][2] / 2.0 * 0.95;
+    vec4 dx = mvp[0][0] / 2.0;
+    vec4 dy = mvp[0][1] / 2.0;
+    vec4 dz = mvp[0][2] / 2.0;
 
     Id = gId[0];
-    Normal = vec3(-1.0, 0.0, 0.0);
-    AddQuad(center + dx, dy, dz);
+    FragPos = gFragPos[0];
+
     Normal = vec3( 1.0, 0.0, 0.0);
+    AddQuad(center + dx, dy, dz);
+    Normal = vec3(-1.0, 0.0, 0.0);
     AddQuad(center - dx, dz, dy);
-    Normal = vec3(0.0,-1.0, 0.0);
-    AddQuad(center + dy, dz, dx);
     Normal = vec3(0.0, 1.0, 0.0);
+    AddQuad(center + dy, dz, dx);
+    Normal = vec3(0.0,-1.0, 0.0);
     AddQuad(center - dy, dx, dz);
-    Normal = vec3(0.0, 0.0,-1.0);
-    AddQuad(center + dz, dx, dy);
     Normal = vec3(0.0, 0.0, 1.0);
+    AddQuad(center + dz, dx, dy);
+    Normal = vec3(0.0, 0.0,-1.0);
     AddQuad(center - dz, dy, dx);
     /*  optimization to display only the 3 faces visibles out of the 6 :
         Relative to the camera position and the cube position we can know

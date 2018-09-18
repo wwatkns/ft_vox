@@ -7,6 +7,7 @@ in vec2 TexCoords;
 uniform vec3 chunkPosition;
 uniform vec3 chunkSize;
 uniform sampler2D noiseSampler;
+uniform float uTime;
 
 #define PI 3.14159265359
 
@@ -82,11 +83,12 @@ void    main() {
     vec3 pos = vec3(c_uv, z);
     vec3 chunk = chunkPosition / chunkSize;
 
-    FragColor.r = float(fbm3d(chunk - 1.0 + pos, 0.5, 0.7, 4, 1.5, 0.5) > 0.5);
+    // FragColor.r = 0.0;
+    FragColor.r = float(fbm3d(chunk - 1.0 + pos + uTime*0.25, 0.5, 0.7, 4, 1.5, 0.5) > 0.5);
 
-    // FragColor.r  = (mod(pos.z,  0.125) <= 1/chunkSize.z. ? 0.0 : 1.0);
-    // FragColor.r *= (mod(pos.x,  0.125) <= 1/chunkSize.x. ? 0.0 : 1.0);
-    // FragColor.r *= (mod(pos.y, 0.0625) <= 1/chunkSize.y. ? 0.0 : 1.0);
+    // FragColor.r  = (mod(pos.z,  0.125) <= 1/chunkSize.z ? 0.0 : 1.0);
+    // FragColor.r *= (mod(pos.x,  0.125) <= 1/chunkSize.x ? 0.0 : 1.0);
+    // FragColor.r *= (mod(pos.y, 0.0625) <= 1/chunkSize.y ? 0.0 : 1.0);
 }
 
 /* 2d height-map example */
