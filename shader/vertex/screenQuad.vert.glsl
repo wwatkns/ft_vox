@@ -10,8 +10,8 @@ uniform float near;
 void main() {
     mat4 Model = mat4(1.0);
     Model[3].xyz = vec3(0.0, 0.0, -near);
-    Model[0][0] = 2.0;
-    Model[1][1] = 2.0;
+    Model[0][0] = 1.0;
+    Model[1][1] = 1.0;
     gl_Position = Model * vec4(aPos, 1.0);
 
     FragPos = aPos;

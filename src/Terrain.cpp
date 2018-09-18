@@ -26,34 +26,46 @@ void    Terrain::generateChunk( const glm::vec3& position ) {
     this->renderChunkGeneration(position, this->dataBuffer);
 
     // for (int i = 0; i < this->chunkGenerationFbo.width * this->chunkGenerationFbo.height; ++i)
-        // std::cout << "(" << i << ") " << std::round(this->dataBuffer[i] * 8.) << std::endl;
+        // std::cout << "(" << i << ") " << this->dataBuffer[i] << std::endl;
+        // std::cout << "(" << i << ") " << std::round(this->dataBuffer[i] * 4.) << std::endl;
 
-    /* convert data */
-    float* data_b = static_cast<float*>(malloc(sizeof(float) * this->chunkSize.x * this->chunkSize.y * this->chunkSize.z));
-
-    for (int i = 0; i < this->chunkSize.x * this->chunkSize.y * this->chunkSize.z; ++i) { data_b[i] = 0; } // TMP, set to 0
-
-    /* convert height-map to surface */
-    for (int y = 0; y < this->chunkSize.z; ++y)
-        for (int x = 0; x < this->chunkSize.x; ++x) {
-            int index = x + y * this->chunkSize.x;
-            int h = index + this->chunkSize.x * this->chunkSize.z * std::min(std::round(this->dataBuffer[index] * this->chunkSize.y), this->chunkSize.y - 1);
-            std::cout << "index : " << h << std::endl;
-            // data_b[h] = 1; /* fill point */
-            for (int f = h; f >= 0; f -= this->chunkSize.x * this->chunkSize.z) { data_b[f] = 1; } /* fill point and below */
-        }
-    /* generate voxels */
+    /* convert 3d volume */
     std::vector<tPoint> voxels;
-    for (int y = 0; y < this->chunkSize.y; ++y)
-        for (int z = 0; z < this->chunkSize.z; ++z)
-            for (int x = 0; x < this->chunkSize.x; ++x) {
-                int index = x + z * this->chunkSize.x + y * this->chunkSize.x * this->chunkSize.z;
-                if (data_b[index] != 0) // 0 is empty block
-                    voxels.push_back( { glm::vec3(x, y, z), (uint8_t)data_b[index] } );
-            }
+    for (int i = 0; i < this->chunkSize.x * this->chunkSize.y * this->chunkSize.z; ++i) {
+        int x = i % (int)this->chunkSize.x;
+        int y = i / (int)(this->chunkSize.x * this->chunkSize.z);
+        int z = i / (int)(this->chunkSize.x) % (int)(this->chunkSize.z);
+
+        // std::cout << this->dataBuffer[i] << std::endl;
+        
+        if (this->dataBuffer[i] != 0) // 0 is empty block
+            voxels.push_back( { glm::vec3(x, y, z), (uint8_t)this->dataBuffer[i] } );
+    }
     this->chunks.push_back( new Chunk(voxels, position) );
-    free(data_b);
-    data_b = nullptr;
+
+    /* convert 2d height-map to surface */
+    // float* data_b = static_cast<float*>(malloc(sizeof(float) * this->chunkSize.x * this->chunkSize.y * this->chunkSize.z));
+
+    // for (int i = 0; i < this->chunkSize.x * this->chunkSize.y * this->chunkSize.z; ++i)
+    //     data_b[i] = 0;
+    // for (int y = 0; y < this->chunkSize.z; ++y)
+    //     for (int x = 0; x < this->chunkSize.x; ++x) {
+    //         int index = x + y * this->chunkSize.x;
+    //         int h = index + this->chunkSize.x * this->chunkSize.z * std::min(std::round(this->dataBuffer[index] * this->chunkSize.y), this->chunkSize.y - 1);
+    //         for (int f = h; f >= 0; f -= this->chunkSize.x * this->chunkSize.z) { data_b[f] = 1; } /* fill point and below */
+    //     }
+    /* generate voxels */
+    // std::vector<tPoint> voxels;
+    // for (int y = 0; y < this->chunkSize.y; ++y)
+    //     for (int z = 0; z < this->chunkSize.z; ++z)
+    //         for (int x = 0; x < this->chunkSize.x; ++x) {
+    //             int index = x + z * this->chunkSize.x + y * this->chunkSize.x * this->chunkSize.z;
+    //             if (data_b[index] != 0) // 0 is empty block
+    //                 voxels.push_back( { glm::vec3(x, y, z), (uint8_t)data_b[index] } );
+    //         }
+    // this->chunks.push_back( new Chunk(voxels, position) );
+    // free(data_b);
+    // data_b = nullptr;
 }
 
 void    Terrain::renderChunkGeneration( const glm::vec3& position, float* data ) {
@@ -99,10 +111,10 @@ void    Terrain::setupChunkGenerationRenderingQuad( void ) {
     /* create quad */
     std::vector<tVertex>    vertices;
     std::vector<float>      quad = {{
-        -0.5,-0.5, 0.0,  0.0, 1.0, // top-left
-         0.5,-0.5, 0.0,  1.0, 1.0, // top-right
-         0.5, 0.5, 0.0,  1.0, 0.0, // bottom-right
-        -0.5, 0.5, 0.0,  0.0, 0.0  // bottom-left
+        -1.0,-1.0, 0.0,  0.0, 1.0, // top-left
+         1.0,-1.0, 0.0,  1.0, 1.0, // top-right
+         1.0, 1.0, 0.0,  1.0, 0.0, // bottom-right
+        -1.0, 1.0, 0.0,  0.0, 0.0  // bottom-left
     }};
     std::vector<unsigned int>   indices = {{
         0, 1, 2,  2, 3, 0
@@ -135,7 +147,8 @@ void    Terrain::setupChunkGenerationRenderingQuad( void ) {
 
 void    Terrain::setupChunkGenerationFbo( void ) {
     this->chunkGenerationFbo.width = this->chunkSize.x;
-    this->chunkGenerationFbo.height = this->chunkSize.z;
+    this->chunkGenerationFbo.height = this->chunkSize.y * this->chunkSize.z;
+    // this->chunkGenerationFbo.height = this->chunkSize.z;
 
     glGenFramebuffers(1, &this->chunkGenerationFbo.fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, this->chunkGenerationFbo.fbo);

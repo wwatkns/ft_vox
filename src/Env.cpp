@@ -11,6 +11,7 @@ Env::Env( void ) {
         this->controller = new Controller(this->window.ptr);
 
         this->terrain = new Terrain(12, glm::vec3(16, 32, 16));
+        // this->terrain = new Terrain(12, glm::vec3(4, 16, 4));
 
         this->skyboxTexture = loadCubemap(std::vector<std::string>{{
             "./resource/CloudyLightRays/CloudyLightRaysLeft2048.png",
