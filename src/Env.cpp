@@ -10,9 +10,13 @@ Env::Env( void ) {
             throw Exception::InitError("glad initialization failed");
         this->controller = new Controller(this->window.ptr);
 
-        this->terrain = new Terrain(6, 48, glm::vec3(16, 16, 16));
-        // this->terrain = new Terrain(12, 32, glm::vec3(16, 32, 16));
-        // this->terrain = new Terrain(10, 32, glm::vec3(4, 16, 4));
+        // this->terrain = new Terrain(6, 48, glm::ivec3(16, 16, 16));
+        // this->terrain = new Terrain(6, 48, glm::ivec3(4, 4, 4));
+        // this->terrain = new Terrain(20, 64, glm::ivec3(16, 16, 16));
+        this->terrain = new Terrain(12, 128, glm::ivec3(32, 32, 32));
+        // this->terrain = new Terrain(5, 64, glm::ivec3(64, 64, 64));
+        // this->terrain = new Terrain(5, 196, glm::ivec3(64, 64, 64));
+        // this->terrain = new Terrain(10, 32, glm::ivec3(4, 16, 4));
 
         // this->skyboxTexture = loadCubemap(std::vector<std::string>{{
         //     "./resource/CloudyLightRays/CloudyLightRaysLeft2048.png",
@@ -85,6 +89,7 @@ void	Env::initGlfwWindow( size_t width, size_t height ) {
 
 void    Env::setupController( void ) {
     this->controller->setKeyProperties(GLFW_KEY_P, eKeyMode::toggle, 1, 1000);
+    this->controller->setKeyProperties(GLFW_KEY_F, eKeyMode::instant, 1, 1000);
 }
 
 void    Env::framebufferSizeCallback( GLFWwindow* window, int width, int height ) {

@@ -1,7 +1,7 @@
 #include "Chunk.hpp"
 #include "glm/ext.hpp"
 
-Chunk::Chunk( std::vector<tPoint> voxels, const glm::vec3& position ) : voxels(voxels) {
+Chunk::Chunk( std::vector<tPoint> voxels, const glm::vec3& position, const glm::vec3& size ) : voxels(voxels), position(position), size(size) {
     this->createModelTransform(position);
     this->setup(GL_STATIC_DRAW);
 }
@@ -11,14 +11,17 @@ Chunk::~Chunk( void ) {
     glDeleteBuffers(1, &this->vbo);
 }
 
-void    Chunk::render( Shader shader ) {
-    /* set transform matrix */
-    shader.setMat4UniformValue("model", this->transform);
-    // create a mvp in chunk
-    /* render */
-    glBindVertexArray(this->vao);
-    glDrawArrays(GL_POINTS, 0, this->voxels.size());
-    glBindVertexArray(0);
+void    Chunk::render( Shader shader, Camera& camera ) {
+    /* view fustrum optimisation (don't render chunk not in view fustrum) */
+    // if (camera.aabInFustrum(-(this->position + this->size / 2), this->size)) {
+    if (camera.sphereInFustrum(-(this->position + this->size / 2), this->size.x * 0.7071067812)) {
+        /* set transform matrix */
+        shader.setMat4UniformValue("model", this->transform);
+        /* render */
+        glBindVertexArray(this->vao);
+        glDrawArrays(GL_POINTS, 0, this->voxels.size());
+        glBindVertexArray(0);
+    }
 }
 
 void    Chunk::setup( int mode ) {
@@ -42,8 +45,4 @@ void    Chunk::setup( int mode ) {
 void    Chunk::createModelTransform( const glm::vec3& position ) {
     this->transform = glm::mat4();
     this->transform = glm::translate(this->transform, position);
-    // this->transform = glm::rotate(this->transform, this->orientation.z, glm::vec3(0, 0, 1));
-    // this->transform = glm::rotate(this->transform, this->orientation.y, glm::vec3(0, 1, 0));
-    // this->transform = glm::rotate(this->transform, this->orientation.x, glm::vec3(1, 0, 0));
-    // this->transform = glm::scale(this->transform, this->scale);
 }

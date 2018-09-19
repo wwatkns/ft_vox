@@ -16,24 +16,18 @@
 #include "Camera.hpp"
 #include "utils.hpp"
 
-
 typedef struct  sPoint {
     glm::vec3   position;
     uint8_t     id;
 }               tPoint;
 
-// typedef struct  sVoxel {
-    // std::vector<tPoint, 6> faces;
-    // uint8_t     id;
-// }               tVoxel;
-
 class Chunk {
 
 public:
-    Chunk( std::vector<tPoint> voxels, const glm::vec3& position );
+    Chunk( std::vector<tPoint> voxels, const glm::vec3& position, const glm::vec3& size );
     ~Chunk( void );
 
-    void                render( Shader shader );
+    void                render( Shader shader, Camera& camera );
     /* getters */
     const GLuint&       getVao( void ) const { return (vao); };
     const GLuint&       getVbo( void ) const { return (vbo); };
@@ -43,6 +37,8 @@ private:
     GLuint              vbo;        // Vertex Buffer Object
     std::vector<tPoint> voxels;     // the list of voxels created in Terrain
     glm::mat4           transform;  // the transform of the chunk (its world position)
+    glm::vec3           position;
+    glm::vec3           size;
 
     void                setup( int mode );
     void                createModelTransform( const glm::vec3& position );

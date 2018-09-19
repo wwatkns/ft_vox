@@ -1,26 +1,47 @@
 #include "Terrain.hpp"
 #include "glm/ext.hpp"
 
-Terrain::Terrain( uint8_t renderDistance, uint8_t maxHeight, const glm::vec3& chunkSize ) : renderDistance(renderDistance), maxHeight(maxHeight), chunkSize(chunkSize) {
+Terrain::Terrain( uint8_t renderDistance, uint8_t maxHeight, const glm::ivec3& chunkSize ) : renderDistance(renderDistance), maxHeight(maxHeight), chunkSize(chunkSize) {
     this->setupChunkGenerationRenderingQuad();
     this->setupChunkGenerationFbo();
     this->chunkGenerationShader = new Shader("./shader/vertex/screenQuad.vert.glsl", "./shader/fragment/generateChunk.frag.glsl");
     this->noiseSampler = loadTexture("./resource/RGBAnoiseMedium.png");
 
     this->dataBuffer = static_cast<uint8_t*>(malloc(sizeof(uint8_t) * this->chunkGenerationFbo.width * this->chunkGenerationFbo.height));
+    // this->prevDataBuffer = static_cast<uint8_t*>(malloc(sizeof(uint8_t) * this->chunkGenerationFbo.width * this->chunkGenerationFbo.height));
 
     this->update();
-
-    /* Generate all the chunks around player */
-    // this->generateChunk(glm::vec3(0, 0, 0));
-    // for (uint8_t z = 0; z < renderDistance; ++z)
-    //     for (uint8_t x = 0; x < renderDistance; ++x) {
-    //         this->generateChunk(glm::vec3(x * this->chunkSize.x, 0, z * this->chunkSize.z)); // TODO: handle y axis also
-    //         // std::cout << "generating chunk : [" << static_cast<int>(x) << ", " << static_cast<int>(z) << "]\n";
-    //     }
 }
 
 Terrain::~Terrain( void ) {
+}
+
+/* OPTI: Find a solution to that, so that the occluded borders of the chunks are also not rendered (big optimisation) */
+// bool    Terrain::isVoxelCulled( int x, int y, int z, int i ) {
+    // return !((!(x + 1 < chunkSize.x) || this->dataBuffer[i + 1                        ] != 0) && /* right */
+    //          (!(x - 1 >= 0         ) || this->dataBuffer[i - 1                        ] != 0) && /* left */
+    //          (!(z + 1 < chunkSize.z) || this->dataBuffer[i + chunkSize.x              ] != 0) && /* front */
+    //          (!(z - 1 >= 0         ) || this->dataBuffer[i - chunkSize.x              ] != 0) && /* back */
+    //          (!(y + 1 < chunkSize.y) || this->dataBuffer[i + chunkSize.x * chunkSize.z] != 0) && /* up */
+    //          (!(y - 1 >= 0         ) || this->dataBuffer[i - chunkSize.x * chunkSize.z] != 0));  /* down */
+// }
+
+/* optimisation : don't save the voxels that are surrounded on all 6 axes */
+bool    Terrain::isVoxelCulled( int x, int y, int z, int i ) {
+    // if (x == 0) {
+    //     return !((this->dataBuffer[i + 1                                               ] != 0) && /* right */
+    //              (this->prevDataBuffer[i+chunkSize.x-1                                 ] != 0) && /* left */
+    //              (z + 1 < chunkSize.z && this->dataBuffer[i + chunkSize.x              ] != 0) && /* front */
+    //              (z - 1 >= 0          && this->dataBuffer[i - chunkSize.x              ] != 0) && /* back */
+    //              (y + 1 < chunkSize.y && this->dataBuffer[i + chunkSize.x * chunkSize.z] != 0) && /* up */
+    //              (y - 1 >= 0          && this->dataBuffer[i - chunkSize.x * chunkSize.z] != 0));  /* down */
+    // }
+    return !((x + 1 < chunkSize.x && this->dataBuffer[i + 1                        ] != 0) && /* right */
+             (x - 1 >= 0          && this->dataBuffer[i - 1                        ] != 0) && /* left */
+             (z + 1 < chunkSize.z && this->dataBuffer[i + chunkSize.x              ] != 0) && /* front */
+             (z - 1 >= 0          && this->dataBuffer[i - chunkSize.x              ] != 0) && /* back */
+             (y + 1 < chunkSize.y && this->dataBuffer[i + chunkSize.x * chunkSize.z] != 0) && /* up */
+             (y - 1 >= 0          && this->dataBuffer[i - chunkSize.x * chunkSize.z] != 0));  /* down */
 }
 
 void    Terrain::generateChunk( const glm::vec3& position ) {
@@ -28,44 +49,39 @@ void    Terrain::generateChunk( const glm::vec3& position ) {
 
     std::vector<tPoint> voxels;
     voxels.reserve(this->chunkSize.x * this->chunkSize.y * this->chunkSize.z);
-    for (int i = 0; i < this->chunkSize.x * this->chunkSize.y * this->chunkSize.z; ++i) {
-        if (this->dataBuffer[i] != 0) { /* 0 is empty block */
-            int x = i % (int)this->chunkSize.x;
-            int y = i / (int)(this->chunkSize.x * this->chunkSize.z);
-            int z = i / (int)(this->chunkSize.x) % (int)(this->chunkSize.z);
-            voxels.push_back( { glm::vec3(x, y, z), (uint8_t)((float)this->dataBuffer[i]/255.0f) } );
-        }
-    }
-    this->chunks.push_back( new Chunk(voxels, position) );
+    // for (int i = 0; i < this->chunkSize.x * this->chunkSize.y * this->chunkSize.z; ++i) {
+    // for (int i = 0; i < this->chunkGenerationFbo.width * this->chunkGenerationFbo.height; ++i) {
+    //     if (this->dataBuffer[i] != 0) { /* if voxel is not air */
+    //         int x = i % this->chunkSize.x;
+    //         int y = (i / (this->chunkSize.x * this->chunkSize.z));
+    //         int z = (i / this->chunkSize.x) % this->chunkSize.z;
+
+    //         // if (x < 1 || x > this->chunkSize.x ||
+    //         //     y < 1 || y > this->chunkSize.y ||
+    //         //     z < 1 || z > this->chunkSize.z)
+    //         //     continue;
+
+    //         if (isVoxelCulled(x, y, z, i))
+    //             voxels.push_back( { glm::vec3(x, y, z), this->dataBuffer[i] } );
+    //     }
+    // }
+    for (int y = 0; y < this->chunkSize.y; ++y)
+        for (int z = 0; z < this->chunkSize.z; ++z)
+            for (int x = 0; x < this->chunkSize.x; ++x) {
+                int i = x + z * this->chunkSize.x + y * this->chunkSize.x * this->chunkSize.z;
+                if (this->dataBuffer[i] != 0) { /* if voxel is not air */
+                    if (isVoxelCulled(x, y, z, i))
+                        voxels.push_back( { glm::vec3(x, y, z), this->dataBuffer[i] } );
+                }
+            }
+    /* optimization : don't save chunk that contains no voxels */
+    if (voxels.size() > 0)
+        this->chunks.push_back( new Chunk(voxels, position, this->chunkSize) );
+
+    // for (int i = 0; i < this->chunkGenerationFbo.width * this->chunkGenerationFbo.height; ++i) // TMP
+    //     this->prevDataBuffer[i] = this->dataBuffer[i];
+    std::cout << voxels.size() << std::endl;
 }
-
-/* convert 2d height-map to surface */
-// void    Terrain::generateChunk( const glm::vec3& position ) {
-//     this->renderChunkGeneration(position, this->dataBuffer);
-
-//     float* data_b = static_cast<float*>(malloc(sizeof(float) * this->chunkSize.x * this->chunkSize.y * this->chunkSize.z));
-
-//     for (int i = 0; i < this->chunkSize.x * this->chunkSize.y * this->chunkSize.z; ++i)
-//         data_b[i] = 0;
-//     for (int y = 0; y < this->chunkSize.z; ++y)
-//         for (int x = 0; x < this->chunkSize.x; ++x) {
-//             int index = x + y * this->chunkSize.x;
-//             int h = index + this->chunkSize.x * this->chunkSize.z * std::min(std::round(this->dataBuffer[index] * this->chunkSize.y), this->chunkSize.y - 1);
-//             for (int f = h; f >= 0; f -= this->chunkSize.x * this->chunkSize.z) { data_b[f] = 1; } /* fill point and below */
-//         }
-//     /* generate voxels */
-//     std::vector<tPoint> voxels;
-//     for (int y = 0; y < this->chunkSize.y; ++y)
-//         for (int z = 0; z < this->chunkSize.z; ++z)
-//             for (int x = 0; x < this->chunkSize.x; ++x) {
-//                 int index = x + z * this->chunkSize.x + y * this->chunkSize.x * this->chunkSize.z;
-//                 if (data_b[index] != 0) // 0 is empty block
-//                     voxels.push_back( { glm::vec3(x, y, z), (uint8_t)data_b[index] } );
-//             }
-//     this->chunks.push_back( new Chunk(voxels, position) );
-//     free(data_b);
-//     data_b = nullptr;
-// }
 
 void    Terrain::renderChunkGeneration( const glm::vec3& position, uint8_t* data ) {
     GLint m_viewport[4];
@@ -81,7 +97,7 @@ void    Terrain::renderChunkGeneration( const glm::vec3& position, uint8_t* data
     this->chunkGenerationShader->setFloatUniformValue("near", 0.1f); // get near from camera
     this->chunkGenerationShader->setFloatUniformValue("uTime", glfwGetTime());
     this->chunkGenerationShader->setVec3UniformValue("chunkPosition", position);
-    this->chunkGenerationShader->setVec3UniformValue("chunkSize", this->chunkSize);
+    this->chunkGenerationShader->setVec3UniformValue("chunkSize", glm::vec3(this->chunkSize) );
     glActiveTexture(GL_TEXTURE0);
     this->chunkGenerationShader->setIntUniformValue("noiseSampler", 0);
     glBindTexture(GL_TEXTURE_2D, this->noiseSampler);
@@ -100,23 +116,19 @@ void    Terrain::renderChunkGeneration( const glm::vec3& position, uint8_t* data
     glEnable(GL_DEPTH_TEST);
 }
 
-void    Terrain::render( Shader shader ) {
+void    Terrain::render( Shader shader, Camera& camera ) {
     for (unsigned int i = 0; i < this->chunks.size(); ++i)
-        this->chunks[i]->render(shader);
+        this->chunks[i]->render(shader, camera);
 }
 
 void    Terrain::update( void ) {
     this->chunks.clear();
-    for (uint8_t z = 0; z < this->renderDistance; ++z)
-        for (uint8_t x = 0; x < this->renderDistance; ++x) {
-            this->generateChunk(glm::vec3(x * this->chunkSize.x, 0, z * this->chunkSize.z)); // TODO: handle y axis also
-            // std::cout << "generating chunk : [" << static_cast<int>(x) << ", " << static_cast<int>(z) << "]\n";
-        }
-    for (uint8_t z = 0; z < this->renderDistance; ++z)
-        for (uint8_t y = 0; y < this->maxHeight / this->chunkSize.y; ++y)
-            for (uint8_t x = 0; x < this->renderDistance; ++x) {
+
+    for (int y = 0; y < this->maxHeight / this->chunkSize.y; ++y)
+        for (int z = 0; z < this->renderDistance; ++z)
+            for (int x = 0; x < this->renderDistance; ++x) {
                 this->generateChunk(glm::vec3(x * this->chunkSize.x, y * this->chunkSize.y, z * this->chunkSize.z));
-                std::cout << "generating chunk : [" << (int)x << ", " << (int)y << ", " << (int)z << "]\n";
+                std::cout << "generating chunk : [" << x << ", " << y << ", " << z << "]\n";
             }
 }
 
@@ -161,7 +173,8 @@ void    Terrain::setupChunkGenerationRenderingQuad( void ) {
 void    Terrain::setupChunkGenerationFbo( void ) {
     this->chunkGenerationFbo.width = this->chunkSize.x;
     this->chunkGenerationFbo.height = this->chunkSize.y * this->chunkSize.z;
-    // this->chunkGenerationFbo.height = this->chunkSize.z;
+    // this->chunkGenerationFbo.width = this->chunkSize.x;
+    // this->chunkGenerationFbo.height = this->chunkSize.y * this->chunkSize.z;
 
     glGenFramebuffers(1, &this->chunkGenerationFbo.fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, this->chunkGenerationFbo.fbo);
@@ -178,3 +191,34 @@ void    Terrain::setupChunkGenerationFbo( void ) {
         return;
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
+
+
+
+
+/* convert 2d height-map to surface */
+// void    Terrain::generateChunk( const glm::vec3& position ) {
+//     this->renderChunkGeneration(position, this->dataBuffer);
+
+//     float* data_b = static_cast<float*>(malloc(sizeof(float) * this->chunkSize.x * this->chunkSize.y * this->chunkSize.z));
+
+//     for (int i = 0; i < this->chunkSize.x * this->chunkSize.y * this->chunkSize.z; ++i)
+//         data_b[i] = 0;
+//     for (int y = 0; y < this->chunkSize.z; ++y)
+//         for (int x = 0; x < this->chunkSize.x; ++x) {
+//             int index = x + y * this->chunkSize.x;
+//             int h = index + this->chunkSize.x * this->chunkSize.z * std::min(std::round(this->dataBuffer[index] * this->chunkSize.y), this->chunkSize.y - 1);
+//             for (int f = h; f >= 0; f -= this->chunkSize.x * this->chunkSize.z) { data_b[f] = 1; } /* fill point and below */
+//         }
+//     /* generate voxels */
+//     std::vector<tPoint> voxels;
+//     for (int y = 0; y < this->chunkSize.y; ++y)
+//         for (int z = 0; z < this->chunkSize.z; ++z)
+//             for (int x = 0; x < this->chunkSize.x; ++x) {
+//                 int index = x + z * this->chunkSize.x + y * this->chunkSize.x * this->chunkSize.z;
+//                 if (data_b[index] != 0) // 0 is empty block
+//                     voxels.push_back( { glm::vec3(x, y, z), (uint8_t)data_b[index] } );
+//             }
+//     this->chunks.push_back( new Chunk(voxels, position) );
+//     free(data_b);
+//     data_b = nullptr;
+// }

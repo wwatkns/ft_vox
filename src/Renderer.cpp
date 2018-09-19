@@ -126,13 +126,14 @@ void    Renderer::renderMeshes( void ) {
     this->shader["default"]->setMat4UniformValue("projection", this->camera.getProjectionMatrix());
     this->shader["default"]->setMat4UniformValue("view", this->camera.getViewMatrix());
     this->shader["default"]->setVec3UniformValue("cameraPos", this->camera.getPosition());
+    this->shader["default"]->setVec3UniformValue("cameraPos2", this->camera.getPosition());
     // this->shader["default"]->setMat4UniformValue("lightSpaceMat", this->lightSpaceMat);
     // glActiveTexture(GL_TEXTURE0);
     // this->shader["default"]->setIntUniformValue("shadowMap", 0);
     // this->shader["default"]->setIntUniformValue("state.use_shadows", this->useShadows);
     // glBindTexture(GL_TEXTURE_2D, this->shadowDepthMap.id);
 
-    this->env->getTerrain()->render(*this->shader["default"]);
+    this->env->getTerrain()->render(*this->shader["default"], this->camera);
     // this->env->getTerrain()->update();
     
     /* copy the depth buffer to a texture (used in raymarch shader for geometry occlusion of raymarched objects) */

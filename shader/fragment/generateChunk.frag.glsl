@@ -78,13 +78,14 @@ float   fbm3d(in vec3 st, in float amplitude, in float frequency, in int octaves
 /* 3d volume texture */
 void    main() {
     vec2 uv = vec2(TexCoords.x, 1.0 - TexCoords.y);
-    vec2 c_uv = floor(uv * chunkSize.xy) / (chunkSize.xy - 1.0);
+    vec2 c_uv = floor(uv * chunkSize.xy) / (chunkSize.xy - 1.);
     float z = mod(floor(uv.y * chunkSize.y * chunkSize.z), chunkSize.z) / (chunkSize.z - 1.);
     vec3 pos = vec3(c_uv, z);
-    vec3 chunk = chunkPosition / chunkSize;
+    // vec3 chunk = chunkPosition / chunkSize;
 
-    // FragColor.r = 0.0;
-    FragColor.r = float(fbm3d(chunk - 1.0 + pos + uTime*0.25, 0.5, 0.7, 4, 1.5, 0.5) > 0.5);
+    // vec3 worldPos = (chunk - 1.0 + pos) * chunkSize;
+    vec3 worldPos = (chunkPosition + pos * chunkSize);
+    FragColor.r = float(fbm3d(worldPos, 0.5, 0.025, 4, 1.5, 0.5) > 0.5);
 
     // FragColor.r  = (mod(pos.z,  0.125) <= 1/chunkSize.z ? 0.0 : 1.0);
     // FragColor.r *= (mod(pos.x,  0.125) <= 1/chunkSize.x ? 0.0 : 1.0);

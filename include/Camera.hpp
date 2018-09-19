@@ -10,12 +10,19 @@
 #include <string>
 #include <fstream>
 #include <chrono>
+#include <array>
 
 #include "Exception.hpp"
 #include "Controller.hpp"
 
 typedef std::chrono::duration<double,std::milli> tMilliseconds;
 typedef std::chrono::steady_clock::time_point tTimePoint;
+
+typedef struct  sPlane {
+    // glm::vec3   point;
+    glm::vec3   normal;
+    float       d;
+}               tPlane;
 
 class Camera {
 
@@ -28,6 +35,12 @@ public:
     tMilliseconds       getElapsedMilliseconds( tTimePoint last );
 
     void                handleInputs( const std::array<tKey, N_KEY>& keys, const tMouse& mouse );
+    /* fustrum logic */
+    void                updateFustrumPlanes( void );
+    bool                pointInFustrum( const glm::vec3& p );
+    bool                sphereInFustrum( const glm::vec3& p, float radius );
+    bool                aabInFustrum( const glm::vec3& p, const glm::vec3& size );
+    
     /* Setters */
     void                setFov( float fov );
     void                setAspect( float aspect );
@@ -49,22 +62,27 @@ public:
     float               speedmod;
 
 private:
-    glm::mat4   projectionMatrix;
-    glm::mat4   invProjectionMatrix;
-    glm::mat4   viewMatrix;
-    glm::mat4   invViewMatrix;
-    glm::vec3   position;
-    glm::vec3   cameraFront;
-    float       fov;
-    float       aspect;
-    float       near;
-    float       far;
+    glm::mat4               projectionMatrix;
+    glm::mat4               invProjectionMatrix;
+    glm::mat4               viewMatrix;
+    glm::mat4               invViewMatrix;
+    glm::vec3               position;
+    glm::vec3               cameraFront;
+    float                   fov;
+    float                   aspect;
+    float                   near;
+    float                   far;
+    bool                    updateFustrum; // tmp
 
-    tTimePoint  last;
+    std::array<tPlane, 6>   planes;
 
-    float       pitch;
-    float       yaw;
+    tTimePoint              last;
 
-    void        handleKeys( const std::array<tKey, N_KEY>& keys );
-    void        handleMouse( const tMouse& mouse, float sensitivity = 0.1f );
+    float                   pitch;
+    float                   yaw;
+
+    void                    handleKeys( const std::array<tKey, N_KEY>& keys );
+    void                    handleMouse( const tMouse& mouse, float sensitivity = 0.1f );
 };
+
+float   distancePointToPlane( const glm::vec3& point, const tPlane& plane );

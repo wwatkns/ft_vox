@@ -42,11 +42,11 @@ typedef struct  sRenderBuffer {
 class Terrain {
 
 public:
-    Terrain( uint8_t renderDistance = 10, uint8_t maxHeight = 128, const glm::vec3& chunkSize = glm::vec3(16, 128, 16) );
+    Terrain( uint8_t renderDistance = 10, uint8_t maxHeight = 128, const glm::ivec3& chunkSize = glm::ivec3(16, 128, 16) );
     ~Terrain( void );
 
     void                        update( void );
-    void                        render( Shader shader );
+    void                        render( Shader shader, Camera& camera );
     void                        generateChunk( const glm::vec3& position );
     void                        deleteChunk( void );
 
@@ -55,16 +55,32 @@ public:
 
 private:
     std::vector<Chunk*>         chunks;
-    glm::vec3                   chunkSize;
+    glm::ivec3                  chunkSize;
     uint8_t                     renderDistance; /* in chunks */
     uint8_t                     maxHeight;
     Shader*                     chunkGenerationShader;
     tMesh                       chunkGenerationRenderingQuad;
     tRenderBuffer               chunkGenerationFbo;
-    GLuint                      noiseSampler; // redundant in Env
+    GLuint                      noiseSampler;
     uint8_t*                    dataBuffer;
+    uint8_t*                    prevDataBuffer;
 
     void                        setupChunkGenerationRenderingQuad( void );
     void                        setupChunkGenerationFbo( void );
     void                        renderChunkGeneration( const glm::vec3& position, uint8_t* data );
+    bool                        isVoxelCulled( int x, int y, int z, int i );
 };
+
+/*  chunk_volume * number_of_chunks
+    32*32*32*12*12*8 / 1000000
+    37.74 Mo
+
+    So we have a max number of chunks stored in RAM, let's arbitrarily set that number to 2048 (16*16*8 chunks), that's ~67 Mo of RAM.
+    Now, we build all the needed chunks around us in world no further than `renderDistance`.
+
+    We populate the loaded chunks lists until we reach maximum capacity. In that case, we remove the elements that are the most distant to
+    the player (we could have a tree as data structure to keep it fast) and insert the new loaded chunk.
+
+    We could also perform a culling check for chunks to generate around player, so that we don't generate them even if they are in
+    renderDistance radius if they're occluded.
+*/
