@@ -7,16 +7,16 @@ out vec3 gFragPos;
 flat out int gId;
 // out vec4 FragPosLightSpace;
 
-uniform mat4 model;
-uniform mat4 view;
-uniform mat4 projection;
+uniform mat4 _model;
+uniform mat4 _mvp;
+// uniform mat4 view;
+// uniform mat4 projection;
 // uniform mat4 lightSpaceMat;
 
 void main() {
     // FragPosLightSpace = lightSpaceMat * vec4(FragPos, 1.0);
-    mvp = projection * view * model;
-    gl_Position = mvp * vec4(aPos, 1.0);
-    
+    gl_Position = _mvp * vec4(aPos, 1.0);
+    mvp = _mvp;
     gId = aId;
-    gFragPos = vec3(model * vec4(aPos, 1.0));
+    gFragPos = vec3(_model * vec4(aPos, 1.0));
 }

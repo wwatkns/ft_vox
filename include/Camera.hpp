@@ -48,9 +48,10 @@ public:
     void                setFar( float far );
     /* Getters */
     const glm::mat4&    getProjectionMatrix( void ) const { return (projectionMatrix); };
-    const glm::mat4&    getInvProjectionMatrix( void ) const { return (invProjectionMatrix); };
     const glm::mat4&    getViewMatrix( void ) const { return (viewMatrix); };
+    const glm::mat4&    getViewProjectionMatrix( void ) const { return (viewProjectionMatrix); };
     const glm::mat4&    getInvViewMatrix( void ) const { return (invViewMatrix); };
+    const glm::mat4&    getInvProjectionMatrix( void ) const { return (invProjectionMatrix); };
     const glm::vec3&    getPosition( void ) const { return (position); };
     const glm::vec3&    getCameraFront( void ) const { return (cameraFront); };
     const float         getFov( void ) const { return (fov); };
@@ -63,9 +64,10 @@ public:
 
 private:
     glm::mat4               projectionMatrix;
-    glm::mat4               invProjectionMatrix;
     glm::mat4               viewMatrix;
+    glm::mat4               viewProjectionMatrix;
     glm::mat4               invViewMatrix;
+    glm::mat4               invProjectionMatrix;
     glm::vec3               position;
     glm::vec3               cameraFront;
     float                   fov;

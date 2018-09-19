@@ -7,6 +7,7 @@ Camera::Camera( float fov, float aspect, float near, float far ) : aspect(aspect
     this->position = glm::vec3(0.0f, 0.0f, 3.0f);
     this->cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
     this->viewMatrix = glm::lookAt(this->position, this->position + this->cameraFront, glm::vec3(0.0f, 1.0f, 0.0f));
+    this->viewProjectionMatrix = this->projectionMatrix * this->viewMatrix;
     this->invViewMatrix = glm::inverse(this->viewMatrix);
     this->pitch = 0;
     this->yaw = 0;
@@ -65,6 +66,7 @@ void    Camera::handleInputs( const std::array<tKey, N_KEY>& keys, const tMouse&
     this->handleKeys(keys);
     this->handleMouse(mouse);
     this->viewMatrix = glm::lookAt(this->position, this->position + this->cameraFront, glm::vec3(0, 1, 0));
+    this->viewProjectionMatrix = this->projectionMatrix * this->viewMatrix;
     this->invViewMatrix = glm::inverse(this->viewMatrix);
     this->last = std::chrono::steady_clock::now();
 
@@ -103,7 +105,7 @@ tMilliseconds   Camera::getElapsedMilliseconds( tTimePoint last ) {
 }
 
 void    Camera::updateFustrumPlanes( void ) {
-    glm::mat3 transform = this->projectionMatrix * this->viewMatrix;
+    glm::mat3 transform = this->viewProjectionMatrix;
     glm::vec3 cameraUp = glm::normalize(glm::row(transform, 1));
     glm::vec3 cameraRight = -glm::normalize(glm::row(transform, 0));
 

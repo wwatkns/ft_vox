@@ -123,8 +123,6 @@ void    Renderer::renderLights( void ) {
 void    Renderer::renderMeshes( void ) {
     /* update shader uniforms */
     this->shader["default"]->use();
-    this->shader["default"]->setMat4UniformValue("projection", this->camera.getProjectionMatrix());
-    this->shader["default"]->setMat4UniformValue("view", this->camera.getViewMatrix());
     this->shader["default"]->setVec3UniformValue("cameraPos", this->camera.getPosition());
     this->shader["default"]->setVec3UniformValue("cameraPos2", this->camera.getPosition());
     // this->shader["default"]->setMat4UniformValue("lightSpaceMat", this->lightSpaceMat);

@@ -13,10 +13,11 @@ Chunk::~Chunk( void ) {
 
 void    Chunk::render( Shader shader, Camera& camera ) {
     /* view fustrum optimisation (don't render chunk not in view fustrum) */
-    // if (camera.aabInFustrum(-(this->position + this->size / 2), this->size)) {
-    if (camera.sphereInFustrum(-(this->position + this->size / 2), this->size.x * 0.7071067812)) {
+    if (camera.aabInFustrum(-(this->position + this->size / 2), this->size)) {
+    // if (camera.sphereInFustrum(-(this->position + this->size / 2), this->size.x * 0.7071067812)) {
         /* set transform matrix */
-        shader.setMat4UniformValue("model", this->transform);
+        shader.setMat4UniformValue("_mvp", camera.getViewProjectionMatrix() * this->transform);
+        shader.setMat4UniformValue("_model", this->transform);
         /* render */
         glBindVertexArray(this->vao);
         glDrawArrays(GL_POINTS, 0, this->voxels.size());
