@@ -47,8 +47,8 @@ void	Renderer::loop( void ) {
     glEnable(GL_DEPTH_TEST); /* z-buffering */
     glEnable(GL_FRAMEBUFFER_SRGB); /* gamma correction */
     glEnable(GL_BLEND); /* transparency */
-    glEnable(GL_CULL_FACE); /* face culling (back faces are not rendered) */
-    glCullFace(GL_BACK);
+    // glEnable(GL_CULL_FACE); /* face culling (back faces are not rendered) */
+    // glCullFace(GL_BACK);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     while (!glfwWindowShouldClose(this->env->getWindow().ptr)) {
         glfwPollEvents();
@@ -124,7 +124,7 @@ void    Renderer::renderMeshes( void ) {
     /* update shader uniforms */
     this->shader["default"]->use();
     this->shader["default"]->setVec3UniformValue("cameraPos", this->camera.getPosition());
-    this->shader["default"]->setVec3UniformValue("cameraPos2", this->camera.getPosition());
+    this->shader["default"]->setVec3UniformValue("viewPos", this->camera.getPosition());
     // this->shader["default"]->setMat4UniformValue("lightSpaceMat", this->lightSpaceMat);
     // glActiveTexture(GL_TEXTURE0);
     // this->shader["default"]->setIntUniformValue("shadowMap", 0);

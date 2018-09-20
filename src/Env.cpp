@@ -13,10 +13,9 @@ Env::Env( void ) {
         // this->terrain = new Terrain(6, 48, glm::ivec3(16, 16, 16));
         // this->terrain = new Terrain(6, 48, glm::ivec3(4, 4, 4));
         // this->terrain = new Terrain(20, 64, glm::ivec3(16, 16, 16));
-        this->terrain = new Terrain(12, 128, glm::ivec3(32, 32, 32));
+        this->terrain = new Terrain(12, 256, glm::ivec3(32, 32, 32)); // <- best performances for now
         // this->terrain = new Terrain(5, 64, glm::ivec3(64, 64, 64));
         // this->terrain = new Terrain(5, 196, glm::ivec3(64, 64, 64));
-        // this->terrain = new Terrain(10, 32, glm::ivec3(4, 16, 4));
 
         // this->skyboxTexture = loadCubemap(std::vector<std::string>{{
         //     "./resource/CloudyLightRays/CloudyLightRaysLeft2048.png",

@@ -43,7 +43,7 @@ typedef struct  sRenderBuffer {
 class Terrain {
 
 public:
-    Terrain( uint8_t renderDistance = 10, uint8_t maxHeight = 128, const glm::ivec3& chunkSize = glm::ivec3(16, 128, 16) );
+    Terrain( uint8_t renderDistance = 10, uint maxHeight = 256, const glm::ivec3& chunkSize = glm::ivec3(32, 32, 32) );
     ~Terrain( void );
 
     void                        update( void );
@@ -60,7 +60,7 @@ private:
     std::vector<Chunk*>         chunks;
     glm::ivec3                  chunkSize;
     uint8_t                     renderDistance; /* in chunks */
-    uint8_t                     maxHeight;
+    uint                        maxHeight;
     Shader*                     chunkGenerationShader;
     tMesh                       chunkGenerationRenderingQuad;
     tRenderBuffer               chunkGenerationFbo;

@@ -27,57 +27,29 @@ Chunk::~Chunk( void ) {
 //              (y - 1 >= 0     && this->texture[i - size.x * size.z] != 0));  /* down */
 // }
 
-/*
-    +-----+-----+-----+
-    |     |     |     |
-    |     |     |     |
-    +-----+-----+-----+
-    |     |     |     |
-    |     |     |     |
-    +-----+-----+-----+
-    |     |     |     |
-    |     |     |     |
-    +-----+-----+-----+
-*/
-
 bool    Chunk::isVoxelCulled( int x, int y, int z, int i, const std::array<const uint8_t*, 6>& adjacentChunks ) {
     bool left, right, front, back, top, down;
-    /* left */
-    if (x == 0 && adjacentChunks[0] != nullptr)
-        left = (adjacentChunks[0][i + (this->size.x - 1)] != 0);
-    else
-        left = (this->texture[i - 1] != 0);
-    /* right */
-    if (x == size.x - 1 && adjacentChunks[1] != nullptr)
-        right = (adjacentChunks[1][i - (this->size.x - 1)] != 0);
-    else
-        right = (this->texture[i + 1] != 0);
-    
-    /* back */
-    if (z == 0 && adjacentChunks[2] != nullptr)
-        back = (adjacentChunks[2][i + (this->size.z - 1) * this->size.x] != 0);
-    else
-        back = (this->texture[i - size.x] != 0);
-    /* front */
-    if (z == size.z - 1 && adjacentChunks[3] != nullptr)
-        front = (adjacentChunks[3][i - (this->size.z - 1) * this->size.x] != 0);
-    else
-        front = (this->texture[i + size.x] != 0);
-
-    /* down */
-    if (y == 0 && adjacentChunks[4] != nullptr)
-        down = (adjacentChunks[4][i + (this->size.y - 1) * this->size.x * this->size.z] != 0);
-    else
-        down = (this->texture[i - size.x * size.z] != 0);
-    /* top */
-    if (y == size.y - 1 && adjacentChunks[5] != nullptr)
-        top = (adjacentChunks[5][i - (this->size.y - 1) * this->size.x * this->size.z] != 0);
-    else
-        top = (this->texture[i + size.x * size.z] != 0);
-
+    /* empty */
+    // left  = (adjacentChunks[0] != nullptr && x == 0          ? (adjacentChunks[0][i + (size.x - 1)                  ] != 0) : (texture[i - 1] != 0));
+    // right = (adjacentChunks[1] != nullptr && x == size.x - 1 ? (adjacentChunks[1][i - (size.x - 1)                  ] != 0) : (texture[i + 1] != 0));
+    // back  = (adjacentChunks[2] != nullptr && z == 0          ? (adjacentChunks[2][i + (size.z - 1) * size.x         ] != 0) : (texture[i - size.x] != 0));
+    // front = (adjacentChunks[3] != nullptr && z == size.z - 1 ? (adjacentChunks[3][i - (size.z - 1) * size.x         ] != 0) : (texture[i + size.x] != 0));
+    // down  = (adjacentChunks[4] != nullptr && y == 0          ? (adjacentChunks[4][i + (size.y - 1) * size.x * size.z] != 0) : (texture[i - size.x * size.z] != 0));
+    // top   = (adjacentChunks[5] != nullptr && y == size.y - 1 ? (adjacentChunks[5][i - (size.y - 1) * size.x * size.z] != 0) : (texture[i + size.x * size.z] != 0));
+    /* empty with borders on world extremities */
+    left  = (adjacentChunks[0] != nullptr && x == 0          ? (adjacentChunks[0][i + (size.x - 1)                  ] != 0) : (adjacentChunks[0] == nullptr && x == 0          ? 0 : (texture[i - 1] != 0)));
+    right = (adjacentChunks[1] != nullptr && x == size.x - 1 ? (adjacentChunks[1][i - (size.x - 1)                  ] != 0) : (adjacentChunks[1] == nullptr && x == size.x - 1 ? 0 : (texture[i + 1] != 0)));
+    back  = (adjacentChunks[2] != nullptr && z == 0          ? (adjacentChunks[2][i + (size.z - 1) * size.x         ] != 0) : (adjacentChunks[2] == nullptr && z == 0          ? 0 : (texture[i - size.x] != 0)));
+    front = (adjacentChunks[3] != nullptr && z == size.z - 1 ? (adjacentChunks[3][i - (size.z - 1) * size.x         ] != 0) : (adjacentChunks[3] == nullptr && z == size.z - 1 ? 0 : (texture[i + size.x] != 0)));
+    down  = (adjacentChunks[4] != nullptr && y == 0          ? (adjacentChunks[4][i + (size.y - 1) * size.x * size.z] != 0) : (adjacentChunks[4] == nullptr && y == 0          ? 0 : (texture[i - size.x * size.z] != 0)));
+    top   = (adjacentChunks[5] != nullptr && y == size.y - 1 ? (adjacentChunks[5][i - (size.y - 1) * size.x * size.z] != 0) : (adjacentChunks[5] == nullptr && y == size.y - 1 ? 0 : (texture[i + size.x * size.z] != 0)));
     return !(left && right && front && back && top && down);
 }
 
+/*  optimisation idea :
+        create a uint8_t containing infos (on bits) about which faces to draw
+        the faces to avoid drawing are those that are shared with an other cube.
+*/
 void    Chunk::buildMesh( const std::array<const uint8_t*, 6>& adjacentChunks ) {
     this->voxels.reserve(this->size.x * this->size.y * this->size.z);
     for (int y = 0; y < this->size.y; ++y)
