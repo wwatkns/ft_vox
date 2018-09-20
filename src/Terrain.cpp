@@ -22,24 +22,6 @@ Terrain::~Terrain( void ) {
     - don't generate chunk mesh if it is occluded
 */
 
-// void    Terrain::generateChunk( const glm::vec3& position ) {
-//     /* generate chunk */
-//     this->renderChunkGeneration(position, this->dataBuffer);
-//     /* generate mesh */
-//     std::vector<tPoint> voxels;
-//     voxels.reserve(this->chunkSize.x * this->chunkSize.y * this->chunkSize.z);
-//     for (int y = 0; y < this->chunkSize.y; ++y)
-//         for (int z = 0; z < this->chunkSize.z; ++z)
-//             for (int x = 0; x < this->chunkSize.x; ++x) {
-//                 int i = x + z * this->chunkSize.x + y * this->chunkSize.x * this->chunkSize.z;
-//                 if (this->dataBuffer[i] != 0) { /* if voxel is not air */
-//                     if (isVoxelCulled(x, y, z, i))
-//                         voxels.push_back( { glm::vec3(x, y, z), this->dataBuffer[i] } );
-//                 }
-//             }
-//     this->chunks.push_back( new Chunk(voxels, position, this->chunkSize, nullptr) );
-// }
-
 void    Terrain::generateChunkTextures( void ) {
     for (int y = 0; y < this->maxHeight / this->chunkSize.y; ++y)
         for (int z = 0; z < this->renderDistance; ++z)
@@ -166,34 +148,3 @@ void    Terrain::setupChunkGenerationFbo( void ) {
         return;
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
-
-
-
-
-/* convert 2d height-map to surface */
-// void    Terrain::generateChunk( const glm::vec3& position ) {
-//     this->renderChunkGeneration(position, this->dataBuffer);
-
-//     float* data_b = static_cast<float*>(malloc(sizeof(float) * this->chunkSize.x * this->chunkSize.y * this->chunkSize.z));
-
-//     for (int i = 0; i < this->chunkSize.x * this->chunkSize.y * this->chunkSize.z; ++i)
-//         data_b[i] = 0;
-//     for (int y = 0; y < this->chunkSize.z; ++y)
-//         for (int x = 0; x < this->chunkSize.x; ++x) {
-//             int index = x + y * this->chunkSize.x;
-//             int h = index + this->chunkSize.x * this->chunkSize.z * std::min(std::round(this->dataBuffer[index] * this->chunkSize.y), this->chunkSize.y - 1);
-//             for (int f = h; f >= 0; f -= this->chunkSize.x * this->chunkSize.z) { data_b[f] = 1; } /* fill point and below */
-//         }
-//     /* generate voxels */
-//     std::vector<tPoint> voxels;
-//     for (int y = 0; y < this->chunkSize.y; ++y)
-//         for (int z = 0; z < this->chunkSize.z; ++z)
-//             for (int x = 0; x < this->chunkSize.x; ++x) {
-//                 int index = x + z * this->chunkSize.x + y * this->chunkSize.x * this->chunkSize.z;
-//                 if (data_b[index] != 0) // 0 is empty block
-//                     voxels.push_back( { glm::vec3(x, y, z), (uint8_t)data_b[index] } );
-//             }
-//     this->chunks.push_back( new Chunk(voxels, position) );
-//     free(data_b);
-//     data_b = nullptr;
-// }

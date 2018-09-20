@@ -92,6 +92,8 @@ void    Camera::handleMouse( const tMouse& mouse, float sensitivity ) {
     this->pitch += (mouse.prevPos.y - mouse.pos.y) * sensitivity;
     this->pitch = std::min(std::max(this->pitch, -89.0f), 89.0f);
     this->yaw += (mouse.pos.x - mouse.prevPos.x) * sensitivity;
+    // this->pitch = 45.0f;
+    // this->yaw = 45.0f;
     glm::vec3 front(
         std::cos(glm::radians(pitch)) * std::cos(glm::radians(yaw)),
         std::sin(glm::radians(pitch)),

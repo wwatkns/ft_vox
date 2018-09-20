@@ -19,12 +19,12 @@
 typedef struct  sPoint {
     glm::vec3   position;
     uint8_t     id;
+    uint8_t     visibleFaces;
 }               tPoint;
 
 class Chunk {
 
 public:
-    // Chunk( std::vector<tPoint> voxels, const glm::vec3& position, const glm::vec3& size, const uint8_t* texture );
     Chunk( const glm::vec3& position, const glm::ivec3& size, const uint8_t* texture );
     ~Chunk( void );
 
@@ -48,6 +48,7 @@ private:
     void                setup( int mode );
     void                createModelTransform( const glm::vec3& position );
     bool                isVoxelCulled( int x, int y, int z, int i, const std::array<const uint8_t*, 6>& adjacentChunks );
+    uint8_t             getVisibleFaces( int x, int y, int z, int i );
 
 };
 

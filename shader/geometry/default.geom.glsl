@@ -5,6 +5,7 @@ layout (triangle_strip, max_vertices = 12) out;
 in mat4 mvp[];
 in vec3 gFragPos[];
 flat in int gId[];
+flat in int gVisibleFaces[];
 
 out vec3 FragPos;
 out vec3 Normal;
@@ -35,23 +36,45 @@ void    main() {
     FragPos = gFragPos[0];
 
     Normal = vec3( 1.0, 0.0, 0.0);
-    if (dot(Normal, (FragPos + dx.xyz) - viewPos) <= -0.5)
+    if ( (gVisibleFaces[0] & 0x20) != 0 && dot(Normal, (FragPos + dx.xyz) - viewPos) <= 0.0)
         AddQuad(center + dx, dy, dz);
     Normal = vec3(-1.0, 0.0, 0.0);
-    if (dot(Normal, (FragPos - dx.xyz) - viewPos) <= -0.5)
+    if ( (gVisibleFaces[0] & 0x10) != 0 && dot(Normal, (FragPos - dx.xyz) - viewPos) <= 0.0)
         AddQuad(center - dx, dz, dy);
     Normal = vec3( 0.0, 1.0, 0.0);
-    if (dot(Normal, (FragPos + dy.xyz) - viewPos) <= 0.0)
+    if ( (gVisibleFaces[0] & 0x02) != 0 && dot(Normal, (FragPos + dy.xyz) - viewPos) <= 0.0)
         AddQuad(center + dy, dz, dx);
     Normal = vec3( 0.0,-1.0, 0.0);
-    if (dot(Normal, (FragPos - dy.xyz) - viewPos) <= 0.0)
+    if ( (gVisibleFaces[0] & 0x01) != 0 && dot(Normal, (FragPos - dy.xyz) - viewPos) <= 0.0)
         AddQuad(center - dy, dx, dz);
     Normal = vec3( 0.0, 0.0, 1.0);
-    if (dot(Normal, (FragPos + dz.xyz) - viewPos) <= 0.0)
+    if ( (gVisibleFaces[0] & 0x08) != 0 && dot(Normal, (FragPos + dz.xyz) - viewPos) <= 0.0)
         AddQuad(center + dz, dx, dy);
     Normal = vec3( 0.0, 0.0,-1.0);
-    if (dot(Normal, (FragPos - dz.xyz) - viewPos) <= 0.0)
+    if ( (gVisibleFaces[0] & 0x04) != 0 && dot(Normal, (FragPos - dz.xyz) - viewPos) <= 0.0)
         AddQuad(center - dz, dy, dx);
+
+    // Normal = vec3(1.0, 0.0, 0.0);
+    // if (dot(Normal, (FragPos + dx.xyz) - viewPos) <= -0.5)
+    //     AddQuad(center + dx, dy, dz);
+    // else {
+    //     Normal = vec3(-1.0, 0.0, 0.0);
+    //     AddQuad(center - dx, dz, dy);
+    // }
+    // Normal = vec3(0.0, 1.0, 0.0);
+    // if (dot(Normal, (FragPos + dy.xyz) - viewPos) <= 0.0)
+    //     AddQuad(center + dy, dz, dx);
+    // else {
+    //     Normal = vec3(0.0,-1.0, 0.0);
+    //     AddQuad(center - dy, dx, dz);
+    // }
+    // Normal = vec3(0.0, 0.0, 1.0);
+    // if (dot(Normal, (FragPos + dz.xyz) - viewPos) <= 0.0)
+    //     AddQuad(center + dz, dx, dy);
+    // else {
+    //     Normal = vec3(0.0, 0.0,-1.0);
+    //     AddQuad(center - dz, dy, dx);
+    // }
 
     // Normal = vec3( 1.0, 0.0, 0.0);
     // AddQuad(center + dx, dy, dz);
