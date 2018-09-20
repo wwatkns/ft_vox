@@ -26,7 +26,6 @@ void    AddQuad(vec4 center, vec4 dy, vec4 dx) {
 
 void    main() {
     vec4 center = gl_in[0].gl_Position;
-    vec3 center2 = gFragPos[0];
     
     vec4 dx = mvp[0][0] / 2.0;// * 0.75;
     vec4 dy = mvp[0][1] / 2.0;// * 0.75;
@@ -36,22 +35,22 @@ void    main() {
     FragPos = gFragPos[0];
 
     Normal = vec3( 1.0, 0.0, 0.0);
-    if (dot(Normal, (center2 + dx.xyz) - viewPos) <= -0.5)
+    if (dot(Normal, (FragPos + dx.xyz) - viewPos) <= -0.5)
         AddQuad(center + dx, dy, dz);
     Normal = vec3(-1.0, 0.0, 0.0);
-    if (dot(Normal, (center2 - dx.xyz) - viewPos) <= -0.5)
+    if (dot(Normal, (FragPos - dx.xyz) - viewPos) <= -0.5)
         AddQuad(center - dx, dz, dy);
     Normal = vec3( 0.0, 1.0, 0.0);
-    if (dot(Normal, (center2 + dy.xyz) - viewPos) <= 0.0)
+    if (dot(Normal, (FragPos + dy.xyz) - viewPos) <= 0.0)
         AddQuad(center + dy, dz, dx);
     Normal = vec3( 0.0,-1.0, 0.0);
-    if (dot(Normal, (center2 - dy.xyz) - viewPos) <= 0.0)
+    if (dot(Normal, (FragPos - dy.xyz) - viewPos) <= 0.0)
         AddQuad(center - dy, dx, dz);
     Normal = vec3( 0.0, 0.0, 1.0);
-    if (dot(Normal, (center2 + dz.xyz) - viewPos) <= 0.0)
+    if (dot(Normal, (FragPos + dz.xyz) - viewPos) <= 0.0)
         AddQuad(center + dz, dx, dy);
     Normal = vec3( 0.0, 0.0,-1.0);
-    if (dot(Normal, (center2 - dz.xyz) - viewPos) <= 0.0)
+    if (dot(Normal, (FragPos - dz.xyz) - viewPos) <= 0.0)
         AddQuad(center - dz, dy, dx);
 
     // Normal = vec3( 1.0, 0.0, 0.0);

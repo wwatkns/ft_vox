@@ -15,33 +15,13 @@ Terrain::Terrain( uint8_t renderDistance, uint maxHeight, const glm::ivec3& chun
 Terrain::~Terrain( void ) {
 }
 
-/* optimisation : don't save the voxels that are surrounded on all 6 axes */
-bool    Terrain::isVoxelCulled( int x, int y, int z, int i ) {
-    // if (x == 0) {
-    //     return !((this->dataBuffer[i + 1                                               ] != 0) && /* right */
-    //              (this->prevDataBuffer[i+chunkSize.x-1                                 ] != 0) && /* left */
-    //              (z + 1 < chunkSize.z && this->dataBuffer[i + chunkSize.x              ] != 0) && /* front */
-    //              (z - 1 >= 0          && this->dataBuffer[i - chunkSize.x              ] != 0) && /* back */
-    //              (y + 1 < chunkSize.y && this->dataBuffer[i + chunkSize.x * chunkSize.z] != 0) && /* up */
-    //              (y - 1 >= 0          && this->dataBuffer[i - chunkSize.x * chunkSize.z] != 0));  /* down */
-    // }
-    return !((x + 1 < chunkSize.x && this->dataBuffer[i + 1                        ] != 0) && /* right */
-             (x - 1 >= 0          && this->dataBuffer[i - 1                        ] != 0) && /* left */
-             (z + 1 < chunkSize.z && this->dataBuffer[i + chunkSize.x              ] != 0) && /* front */
-             (z - 1 >= 0          && this->dataBuffer[i - chunkSize.x              ] != 0) && /* back */
-             (y + 1 < chunkSize.y && this->dataBuffer[i + chunkSize.x * chunkSize.z] != 0) && /* up */
-             (y - 1 >= 0          && this->dataBuffer[i - chunkSize.x * chunkSize.z] != 0));  /* down */
-}
-
-
 /*  Chunk rendering pipeline :
     - create a list of chunks to render
     - generate the chunk with fragment shader
     - create the chunk meshes from front to back
     - don't generate chunk mesh if it is occluded
-
-
 */
+
 // void    Terrain::generateChunk( const glm::vec3& position ) {
 //     /* generate chunk */
 //     this->renderChunkGeneration(position, this->dataBuffer);
@@ -127,20 +107,6 @@ void    Terrain::update( void ) {
     // this->chunks.clear();
     this->generateChunkTextures();
     this->generateChunkMeshes();
-
-    // /* generate chunk textures */
-    // for (int y = 0; y < this->maxHeight / this->chunkSize.y; ++y)
-    //     for (int z = 0; z < this->renderDistance; ++z)
-    //         for (int x = 0; x < this->renderDistance; ++x) {
-    //             this->generateChunkTextures(glm::vec3(x * this->chunkSize.x, y * this->chunkSize.y, z * this->chunkSize.z));
-    //             // std::cout << "generating chunk : [" << x << ", " << y << ", " << z << "]\n";
-    //         }
-    // /* generate chunk meshes */
-    // for (int y = 0; y < this->maxHeight / this->chunkSize.y; ++y)
-    //     for (int z = 0; z < this->renderDistance; ++z)
-    //         for (int x = 0; x < this->renderDistance; ++x) {
-    //             this->generateChunkMeshes(glm::vec3(x * this->chunkSize.x, y * this->chunkSize.y, z * this->chunkSize.z));
-    //         }
 }
 
 void    Terrain::setupChunkGenerationRenderingQuad( void ) {
@@ -184,8 +150,6 @@ void    Terrain::setupChunkGenerationRenderingQuad( void ) {
 void    Terrain::setupChunkGenerationFbo( void ) {
     this->chunkGenerationFbo.width = this->chunkSize.x;
     this->chunkGenerationFbo.height = this->chunkSize.y * this->chunkSize.z;
-    // this->chunkGenerationFbo.width = this->chunkSize.x;
-    // this->chunkGenerationFbo.height = this->chunkSize.y * this->chunkSize.z;
 
     glGenFramebuffers(1, &this->chunkGenerationFbo.fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, this->chunkGenerationFbo.fbo);

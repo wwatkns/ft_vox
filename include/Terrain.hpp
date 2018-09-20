@@ -70,7 +70,6 @@ private:
     void                        setupChunkGenerationRenderingQuad( void );
     void                        setupChunkGenerationFbo( void );
     void                        renderChunkGeneration( const glm::vec3& position, uint8_t* data );
-    bool                        isVoxelCulled( int x, int y, int z, int i );
 };
 
 /*  chunk_volume * number_of_chunks
