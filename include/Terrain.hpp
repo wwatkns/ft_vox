@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 #include <cmath>
+#include <array>
 
 #include "Exception.hpp"
 #include "Shader.hpp"
@@ -47,7 +48,9 @@ public:
 
     void                        update( void );
     void                        render( Shader shader, Camera& camera );
-    void                        generateChunk( const glm::vec3& position );
+
+    void                        generateChunkTextures( void );
+    void                        generateChunkMeshes( void );
     void                        deleteChunk( void );
 
     /* getters */
@@ -63,7 +66,6 @@ private:
     tRenderBuffer               chunkGenerationFbo;
     GLuint                      noiseSampler;
     uint8_t*                    dataBuffer;
-    uint8_t*                    prevDataBuffer;
 
     void                        setupChunkGenerationRenderingQuad( void );
     void                        setupChunkGenerationFbo( void );

@@ -36,15 +36,12 @@ void    AddQuad(vec4 center, vec4 dy, vec4 dx) {
 void    main() {
     vec4 center = gl_in[0].gl_Position;
     
-    vec4 dx = mvp[0][0] / 2.0 * 0.75;
-    vec4 dy = mvp[0][1] / 2.0 * 0.75;
-    vec4 dz = mvp[0][2] / 2.0 * 0.75;
+    vec4 dx = mvp[0][0] / 2.0 * 0.85;
+    vec4 dy = mvp[0][1] / 2.0 * 0.85;
+    vec4 dz = mvp[0][2] / 2.0 * 0.85;
 
     Id = gId[0];
     FragPos = gFragPos[0];
-
-    vec3[4] vert;
-    vec3 norm;
 
     // if (dx.z < 0) {    
     //     Normal = vec3( 1.0, 0.0, 0.0);
@@ -86,6 +83,8 @@ void    main() {
     /*  BIG optimization to display only the 3 faces visibles out of the 6 :
         Relative to the camera position and the cube position we can know
         which faces are visible, and don't render those that are not.
+
+        MAIS QUELLES SONT LES NORMALES QUI REGARDENT LA CAMERA :O !
      */
 }
 

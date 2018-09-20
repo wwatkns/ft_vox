@@ -24,13 +24,17 @@ typedef struct  sPoint {
 class Chunk {
 
 public:
-    Chunk( std::vector<tPoint> voxels, const glm::vec3& position, const glm::vec3& size );
+    // Chunk( std::vector<tPoint> voxels, const glm::vec3& position, const glm::vec3& size, const uint8_t* texture );
+    Chunk( const glm::vec3& position, const glm::ivec3& size, const uint8_t* texture );
     ~Chunk( void );
 
+    void                buildMesh( const std::array<const uint8_t*, 6>& adjacentChunks );
     void                render( Shader shader, Camera& camera );
     /* getters */
-    const GLuint&       getVao( void ) const { return (vao); };
-    const GLuint&       getVbo( void ) const { return (vbo); };
+    const GLuint&       getVao( void ) const { return vao; };
+    const GLuint&       getVbo( void ) const { return vbo; };
+    const glm::vec3&    getPosition( void ) const { return position; };
+    const uint8_t*      getTexture( void ) const { return texture; };
 
 private:
     GLuint              vao;        // Vertex Array Object
@@ -38,10 +42,12 @@ private:
     std::vector<tPoint> voxels;     // the list of voxels created in Terrain
     glm::mat4           transform;  // the transform of the chunk (its world position)
     glm::vec3           position;
-    glm::vec3           size;
+    glm::ivec3          size;
+    uint8_t*            texture;    /* the texture outputed by the chunk generation shader */
 
     void                setup( int mode );
     void                createModelTransform( const glm::vec3& position );
+    bool                isVoxelCulled( int x, int y, int z, int i, const std::array<const uint8_t*, 6>& adjacentChunks );
 
 };
 

@@ -1,9 +1,16 @@
 #include "Chunk.hpp"
 #include "glm/ext.hpp"
 
-Chunk::Chunk( std::vector<tPoint> voxels, const glm::vec3& position, const glm::vec3& size ) : voxels(voxels), position(position), size(size) {
+// Chunk::Chunk( std::vector<tPoint> voxels, const glm::vec3& position, const glm::vec3& size, const uint8_t* texture ) : voxels(voxels), position(position), size(size) {
+//     this->createModelTransform(position);
+//     this->setup(GL_STATIC_DRAW);
+//     memcpy(this->texture, texture, size.x * size.y * size.z);
+// }
+
+Chunk::Chunk( const glm::vec3& position, const glm::ivec3& size, const uint8_t* texture ) : position(position), size(size) {
     this->createModelTransform(position);
-    this->setup(GL_STATIC_DRAW);
+    this->texture = static_cast<uint8_t*>(malloc(sizeof(uint8_t) * size.x * size.y * size.z));
+    memcpy(this->texture, texture, size.x * size.y * size.z);
 }
 
 Chunk::~Chunk( void ) {
@@ -11,10 +18,84 @@ Chunk::~Chunk( void ) {
     glDeleteBuffers(1, &this->vbo);
 }
 
+// bool    Chunk::isVoxelCulled( int x, int y, int z, int i ) {
+//     return !((x + 1 < size.x && this->texture[i + 1              ] != 0) && /* right */
+//              (x - 1 >= 0     && this->texture[i - 1              ] != 0) && /* left */
+//              (z + 1 < size.z && this->texture[i + size.x         ] != 0) && /* front */
+//              (z - 1 >= 0     && this->texture[i - size.x         ] != 0) && /* back */
+//              (y + 1 < size.y && this->texture[i + size.x * size.z] != 0) && /* up */
+//              (y - 1 >= 0     && this->texture[i - size.x * size.z] != 0));  /* down */
+// }
+
+/*
+    +-----+-----+-----+
+    |     |     |     |
+    |     |     |     |
+    +-----+-----+-----+
+    |     |     |     |
+    |     |     |     |
+    +-----+-----+-----+
+    |     |     |     |
+    |     |     |     |
+    +-----+-----+-----+
+*/
+
+bool    Chunk::isVoxelCulled( int x, int y, int z, int i, const std::array<const uint8_t*, 6>& adjacentChunks ) {
+    bool left, right, front, back, top, down;
+    /* left */
+    if (x == 0 && adjacentChunks[0] != nullptr)
+        left = (adjacentChunks[0][i + (this->size.x - 1)] != 0);
+    else
+        left = (this->texture[i - 1] != 0);
+    /* right */
+    if (x == size.x - 1 && adjacentChunks[1] != nullptr)
+        right = (adjacentChunks[1][i - (this->size.x - 1)] != 0);
+    else
+        right = (this->texture[i + 1] != 0);
+    
+    /* back */
+    if (z == 0 && adjacentChunks[2] != nullptr)
+        back = (adjacentChunks[2][i + (this->size.z - 1) * this->size.x] != 0);
+    else
+        back = (this->texture[i - size.x] != 0);
+    /* front */
+    if (z == size.z - 1 && adjacentChunks[3] != nullptr)
+        front = (adjacentChunks[3][i - (this->size.z - 1) * this->size.x] != 0);
+    else
+        front = (this->texture[i + size.x] != 0);
+
+    /* down */
+    if (y == 0 && adjacentChunks[4] != nullptr)
+        down = (adjacentChunks[4][i + (this->size.y - 1) * this->size.x * this->size.z] != 0);
+    else
+        down = (this->texture[i - size.x * size.z] != 0);
+    /* top */
+    if (y == size.y - 1 && adjacentChunks[5] != nullptr)
+        top = (adjacentChunks[5][i - (this->size.y - 1) * this->size.x * this->size.z] != 0);
+    else
+        top = (this->texture[i + size.x * size.z] != 0);
+
+    return !(left && right && front && back && top && down);
+}
+
+void    Chunk::buildMesh( const std::array<const uint8_t*, 6>& adjacentChunks ) {
+    this->voxels.reserve(this->size.x * this->size.y * this->size.z);
+    for (int y = 0; y < this->size.y; ++y)
+        for (int z = 0; z < this->size.z; ++z)
+            for (int x = 0; x < this->size.x; ++x) {
+                int i = x + z * this->size.x + y * this->size.x * this->size.z;
+                if (this->texture[i] != 0) { /* if voxel is not air */
+                    if (isVoxelCulled(x, y, z, i, adjacentChunks))
+                        this->voxels.push_back( { glm::vec3(x, y, z), this->texture[i] } );
+                }
+            }
+    this->setup(GL_STATIC_DRAW);
+}
+
 void    Chunk::render( Shader shader, Camera& camera ) {
-    /* view fustrum optimisation (don't render chunk not in view fustrum) */
-    if (camera.aabInFustrum(-(this->position + this->size / 2), this->size)) {
-    // if (camera.sphereInFustrum(-(this->position + this->size / 2), this->size.x * 0.7071067812)) {
+    glm::vec3 size = this->size;
+    /* optimisation: view fustrum occlusion */
+    if (camera.aabInFustrum(-(this->position + size / 2), size) && this->voxels.size() > 0 && this->texture) {
         /* set transform matrix */
         shader.setMat4UniformValue("_mvp", camera.getViewProjectionMatrix() * this->transform);
         shader.setMat4UniformValue("_model", this->transform);
@@ -32,10 +113,10 @@ void    Chunk::setup( int mode ) {
 	glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
 	glBufferData(GL_ARRAY_BUFFER, this->voxels.size() * sizeof(tPoint), this->voxels.data(), mode);
 
-    // position attribute
+    /* position attribute */
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(tPoint), static_cast<GLvoid*>(0));
-    // id attribute
+    /* id attribute */
     glEnableVertexAttribArray(1);
 	glVertexAttribIPointer(1, 1, GL_UNSIGNED_BYTE, sizeof(tPoint), reinterpret_cast<GLvoid*>(offsetof(tPoint, id)));
 
