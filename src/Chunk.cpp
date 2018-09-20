@@ -23,12 +23,12 @@ Chunk::~Chunk( void ) {
 
 uint8_t Chunk::getVisibleFaces( int x, int y, int z, int i ) {
     uint8_t faces = 0x0;
-    if (x + 1 < size.x && this->texture[i + 1              ] == 0) faces |= (1 << 5); // right
-    if (x - 1 >= 0     && this->texture[i - 1              ] == 0) faces |= (1 << 4); // left
-    if (z + 1 < size.z && this->texture[i + size.x         ] == 0) faces |= (1 << 3); // front
-    if (z - 1 >= 0     && this->texture[i - size.x         ] == 0) faces |= (1 << 2); // back
-    if (y + 1 < size.y && this->texture[i + size.x * size.z] == 0) faces |= (1 << 1); // up
-    if (y - 1 >= 0     && this->texture[i - size.x * size.z] == 0) faces |= (1 << 0); // down
+    faces |= (x + 1 < size.x && this->texture[i + 1              ] == 0) << 5; // right
+    faces |= (x - 1 >= 0     && this->texture[i - 1              ] == 0) << 4; // left
+    faces |= (z + 1 < size.z && this->texture[i + size.x         ] == 0) << 3; // front
+    faces |= (z - 1 >= 0     && this->texture[i - size.x         ] == 0) << 2; // back
+    faces |= (y + 1 < size.y && this->texture[i + size.x * size.z] == 0) << 1; // up
+    faces |= (y - 1 >= 0     && this->texture[i - size.x * size.z] == 0);      // down
     return faces;
 }
 

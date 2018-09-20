@@ -53,11 +53,16 @@ private:
 };
 
 /*
-    - A chunk is a mesh of the voxels in that volume, so one VBO and one VAO.
-    - So for creating or updating a chunk, we must :
-        * delete the current Chunk
-        * create a new mesh
-        * create a new chunk with that mesh
-        * bind VBO/VAO...
-    - 
+    Mesh creation optimisations :
+    * don't save empty voxels
+    * voxel occlusion (don't save/render voxels that are surrounded by solid voxels)
+    * back-face occlusion (don't render faces not facing the camera)
+    * faces interior occlusion (don't render faces that have an adjacent voxel)
+    
+    Rendering optimisations :
+    * view fustrum chunk occlusion (don't render chunks outside the camera fustrum)
+    * don't render empty chunks
 */
+
+// TODO : implement occlusion culling (don't render chunks that are occluded entirely by other chunks)
+// TODO : implement front to back rendering (so we keep the chunk in some kind of tree to know which ones are the closest)
