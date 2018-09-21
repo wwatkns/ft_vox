@@ -11,6 +11,7 @@
 #include <vector>
 #include <cmath>
 #include <array>
+#include <unordered_map>
 
 #include "Exception.hpp"
 #include "Shader.hpp"
@@ -40,6 +41,24 @@ typedef struct  sRenderBuffer {
     size_t          height;
 }               tRenderBuffer;
 
+struct  Key {
+    glm::vec3   p;
+
+    bool operator==(const Key &other) const {
+        return (p.x == other.p.x && p.y == other.p.y && p.z == other.p.z);
+    }
+};
+
+struct KeyHash {
+    uint64_t operator()(const Key &k) const {
+        uint64_t    hash = 0;
+        hash |= (int)k.p.x;
+        hash |= (int)k.p.y << 8;
+        hash |= (int)k.p.z << 16;
+        return (hash);
+    }
+};
+
 class Terrain {
 
 public:
@@ -54,10 +73,15 @@ public:
     void                        deleteChunk( void );
 
     /* getters */
-    const std::vector<Chunk*>   getChunks( void ) const { return (chunks); };
+    // const std::vector<Chunk*>   getChunks( void ) const { return (chunks); };
 
 private:
-    std::vector<Chunk*>         chunks;
+    /* TODO: store chunks in an unordered_map with key describing xyz position of chunk
+             that way we can check easily if a chunk for a given position is already loaded,
+             and we have a O(1), worst O(log n) lookup time
+    */
+    std::unordered_map<Key, Chunk*, KeyHash>   chunks;
+    // std::vector<Chunk*>         chunks;
     glm::ivec3                  chunkSize;
     uint8_t                     renderDistance; /* in chunks */
     uint                        maxHeight;

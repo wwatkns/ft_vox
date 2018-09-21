@@ -48,7 +48,7 @@ private:
     void                setup( int mode );
     void                createModelTransform( const glm::vec3& position );
     bool                isVoxelCulled( int x, int y, int z, int i, const std::array<const uint8_t*, 6>& adjacentChunks );
-    uint8_t             getVisibleFaces( int x, int y, int z, int i );
+    uint8_t             getVisibleFaces( int x, int y, int z, int i, const std::array<const uint8_t*, 6>& adjacentChunks );
 
 };
 
@@ -66,3 +66,7 @@ private:
 
 // TODO : implement occlusion culling (don't render chunks that are occluded entirely by other chunks)
 // TODO : implement front to back rendering (so we keep the chunk in some kind of tree to know which ones are the closest)
+// TODO : implement multi-threading for chunk generation and meshing (we'll see when it becomes a bottleneck)
+
+// TODO : chunk management : have a chunksToLoad list, and a maximum number of chunks to generate per frame, that way we can
+//        avoid having big framerate hit in some situations

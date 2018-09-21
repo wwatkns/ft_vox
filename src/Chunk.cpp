@@ -8,6 +8,8 @@ Chunk::Chunk( const glm::vec3& position, const glm::ivec3& size, const uint8_t* 
 }
 
 Chunk::~Chunk( void ) {
+    free(this->texture);
+    this->texture = NULL;
     glDeleteBuffers(1, &this->vao);
     glDeleteBuffers(1, &this->vbo);
 }
@@ -21,14 +23,14 @@ Chunk::~Chunk( void ) {
 //              (y - 1 >= 0     && this->texture[i - size.x * size.z] != 0));  /* down */
 // }
 
-uint8_t Chunk::getVisibleFaces( int x, int y, int z, int i ) {
+uint8_t Chunk::getVisibleFaces( int x, int y, int z, int i, const std::array<const uint8_t*, 6>& adjacentChunks ) {
     uint8_t faces = 0x0;
-    faces |= (x + 1 < size.x && this->texture[i + 1              ] == 0) << 5; // right
-    faces |= (x - 1 >= 0     && this->texture[i - 1              ] == 0) << 4; // left
-    faces |= (z + 1 < size.z && this->texture[i + size.x         ] == 0) << 3; // front
-    faces |= (z - 1 >= 0     && this->texture[i - size.x         ] == 0) << 2; // back
-    faces |= (y + 1 < size.y && this->texture[i + size.x * size.z] == 0) << 1; // up
-    faces |= (y - 1 >= 0     && this->texture[i - size.x * size.z] == 0);      // down
+    faces |= ((x + 1 < size.x && this->texture[i + 1              ] == 0) || adjacentChunks[1] == nullptr) << 5; // right
+    faces |= ((x - 1 >= 0     && this->texture[i - 1              ] == 0) || adjacentChunks[0] == nullptr) << 4; // left
+    faces |= ((z + 1 < size.z && this->texture[i + size.x         ] == 0) || adjacentChunks[3] == nullptr) << 3; // front
+    faces |= ((z - 1 >= 0     && this->texture[i - size.x         ] == 0) || adjacentChunks[2] == nullptr) << 2; // back
+    faces |= ((y + 1 < size.y && this->texture[i + size.x * size.z] == 0) || adjacentChunks[5] == nullptr) << 1; // up
+    faces |= ((y - 1 >= 0     && this->texture[i - size.x * size.z] == 0) || adjacentChunks[4] == nullptr);      // down
     return faces;
 }
 
@@ -59,7 +61,7 @@ void    Chunk::buildMesh( const std::array<const uint8_t*, 6>& adjacentChunks ) 
                 int i = x + z * this->size.x + y * this->size.x * this->size.z;
                 if (this->texture[i] != 0) { /* if voxel is not air */
                     if (!isVoxelCulled(x, y, z, i, adjacentChunks)) {
-                        uint8_t visibleFaces = getVisibleFaces(x, y, z, i);
+                        uint8_t visibleFaces = getVisibleFaces(x, y, z, i, adjacentChunks);
                         this->voxels.push_back( { glm::vec3(x, y, z), this->texture[i], visibleFaces } );
                     }
                 }

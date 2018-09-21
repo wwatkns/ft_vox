@@ -15,35 +15,42 @@ Terrain::Terrain( uint8_t renderDistance, uint maxHeight, const glm::ivec3& chun
 Terrain::~Terrain( void ) {
 }
 
-/*  Chunk rendering pipeline :
-    - create a list of chunks to render
-    - generate the chunk with fragment shader
-    - create the chunk meshes from front to back
-    - don't generate chunk mesh if it is occluded
-*/
-
 void    Terrain::generateChunkTextures( void ) {
-    for (int y = 0; y < this->maxHeight / this->chunkSize.y; ++y)
-        for (int z = 0; z < this->renderDistance; ++z)
-            for (int x = 0; x < this->renderDistance; ++x) {
+    int height = this->maxHeight / this->chunkSize.y;
+    int dist = this->renderDistance / 2;
+    for (int y = -height; y < 0; ++y)
+        for (int z = -dist; z < dist; ++z)
+            for (int x = -dist; x < dist; ++x) {
                 glm::vec3 position = glm::vec3(x * this->chunkSize.x, y * this->chunkSize.y, z * this->chunkSize.z);
                 this->renderChunkGeneration(position, this->dataBuffer);
-                this->chunks.push_back( new Chunk(position, this->chunkSize, this->dataBuffer) );
-                std::cout << "(" << x << ", " << y << ", "<< z << ")" << std::endl;
+                // this->chunks.push_back( new Chunk(position, this->chunkSize, this->dataBuffer) );
+                this->chunks.insert( { {glm::vec3(x, y, z)}, new Chunk(position, this->chunkSize, this->dataBuffer) } );
+                // std::cout << "(" << x << ", " << y << ", "<< z << ")" << std::endl;
             }
 }
 
 void    Terrain::generateChunkMeshes( void ) {
-    for (int i = 0; i < this->chunks.size(); ++i) {
-        std::array<const uint8_t*, 6> adjacentChunks = { // TMP, we will have more complex data structure next
-            (i - 1   >= 0                  ? this->chunks[i - 1  ]->getTexture() : nullptr), // left
-            (i + 1   < this->chunks.size() ? this->chunks[i + 1  ]->getTexture() : nullptr), // right
-            (i - 12  >= 0                  ? this->chunks[i - 12 ]->getTexture() : nullptr), // back
-            (i + 12  < this->chunks.size() ? this->chunks[i + 12 ]->getTexture() : nullptr), // front
-            (i - 144 >= 0                  ? this->chunks[i - 144]->getTexture() : nullptr), // down
-            (i + 144 < this->chunks.size() ? this->chunks[i + 144]->getTexture() : nullptr)  // up
+    // for (int i = 0; i < this->chunks.size(); ++i) {
+    //     std::array<const uint8_t*, 6> adjacentChunks = { // TMP, we will have more complex data structure next
+    //         (i - 1   >= 0                  ? this->chunks[i - 1  ]->getTexture() : nullptr), // left
+    //         (i + 1   < this->chunks.size() ? this->chunks[i + 1  ]->getTexture() : nullptr), // right
+    //         (i - 12  >= 0                  ? this->chunks[i - 12 ]->getTexture() : nullptr), // back
+    //         (i + 12  < this->chunks.size() ? this->chunks[i + 12 ]->getTexture() : nullptr), // front
+    //         (i - 144 >= 0                  ? this->chunks[i - 144]->getTexture() : nullptr), // down
+    //         (i + 144 < this->chunks.size() ? this->chunks[i + 144]->getTexture() : nullptr)  // up
+    //     };
+    //     this->chunks[i]->buildMesh(adjacentChunks);
+    // }
+    for (std::pair<Key, Chunk*> chunk : this->chunks) {
+        std::array<const uint8_t*, 6> adjacentChunks = {
+            ( chunks.find({chunk.first.p - glm::vec3(1, 0, 0)}) != chunks.end() ? chunks[{chunk.first.p - glm::vec3(1, 0, 0)}]->getTexture() : nullptr), // left
+            ( chunks.find({chunk.first.p + glm::vec3(1, 0, 0)}) != chunks.end() ? chunks[{chunk.first.p + glm::vec3(1, 0, 0)}]->getTexture() : nullptr), // right
+            ( chunks.find({chunk.first.p - glm::vec3(0, 0, 1)}) != chunks.end() ? chunks[{chunk.first.p - glm::vec3(0, 0, 1)}]->getTexture() : nullptr), // back
+            ( chunks.find({chunk.first.p + glm::vec3(0, 0, 1)}) != chunks.end() ? chunks[{chunk.first.p + glm::vec3(0, 0, 1)}]->getTexture() : nullptr), // front
+            ( chunks.find({chunk.first.p - glm::vec3(0, 1, 0)}) != chunks.end() ? chunks[{chunk.first.p - glm::vec3(0, 1, 0)}]->getTexture() : nullptr), // down
+            ( chunks.find({chunk.first.p + glm::vec3(0, 1, 0)}) != chunks.end() ? chunks[{chunk.first.p + glm::vec3(0, 1, 0)}]->getTexture() : nullptr)  // up
         };
-        this->chunks[i]->buildMesh(adjacentChunks);
+        chunk.second->buildMesh(adjacentChunks);
     }
 }
 
@@ -81,8 +88,11 @@ void    Terrain::renderChunkGeneration( const glm::vec3& position, uint8_t* data
 }
 
 void    Terrain::render( Shader shader, Camera& camera ) {
-    for (unsigned int i = 0; i < this->chunks.size(); ++i)
-        this->chunks[i]->render(shader, camera);
+    // for (unsigned int i = 0; i < this->chunks.size(); ++i)
+        // this->chunks[i]->render(shader, camera);
+    
+    for (std::pair<Key, Chunk*> chunk : this->chunks)
+        chunk.second->render(shader, camera);
 }
 
 void    Terrain::update( void ) {

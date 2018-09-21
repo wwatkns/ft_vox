@@ -36,10 +36,10 @@ void    main() {
     FragPos = gFragPos[0];
 
     Normal = vec3( 1.0, 0.0, 0.0);
-    if ( (gVisibleFaces[0] & 0x20) != 0 && dot(Normal, (FragPos + dx.xyz) - viewPos) <= 0.0)
+    if ( (gVisibleFaces[0] & 0x20) != 0 && dot(Normal, (FragPos + dx.xyz) - viewPos) <= -0.5)
         AddQuad(center + dx, dy, dz);
     Normal = vec3(-1.0, 0.0, 0.0);
-    if ( (gVisibleFaces[0] & 0x10) != 0 && dot(Normal, (FragPos - dx.xyz) - viewPos) <= 0.0)
+    if ( (gVisibleFaces[0] & 0x10) != 0 && dot(Normal, (FragPos - dx.xyz) - viewPos) <= -0.5)
         AddQuad(center - dx, dz, dy);
     Normal = vec3( 0.0, 1.0, 0.0);
     if ( (gVisibleFaces[0] & 0x02) != 0 && dot(Normal, (FragPos + dy.xyz) - viewPos) <= 0.0)
