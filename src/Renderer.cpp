@@ -18,6 +18,7 @@ camera(80, (float)env->getWindow().width / (float)env->getWindow().height, 0.1f,
 }
 
 Renderer::~Renderer( void ) {
+    this->shader.clear();
 }
 
 /*

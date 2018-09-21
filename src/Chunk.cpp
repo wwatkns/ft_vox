@@ -1,7 +1,7 @@
 #include "Chunk.hpp"
 #include "glm/ext.hpp"
 
-Chunk::Chunk( const glm::vec3& position, const glm::ivec3& size, const uint8_t* texture ) : position(position), size(size) {
+Chunk::Chunk( const glm::vec3& position, const glm::ivec3& size, const uint8_t* texture ) : position(position), size(size), meshed(false) {
     this->createModelTransform(position);
     this->texture = static_cast<uint8_t*>(malloc(sizeof(uint8_t) * size.x * size.y * size.z));
     memcpy(this->texture, texture, size.x * size.y * size.z);
@@ -13,15 +13,6 @@ Chunk::~Chunk( void ) {
     glDeleteBuffers(1, &this->vao);
     glDeleteBuffers(1, &this->vbo);
 }
-
-// bool    Chunk::isVoxelCulled( int x, int y, int z, int i ) {
-//     return !((x + 1 < size.x && this->texture[i + 1              ] != 0) && /* right */
-//              (x - 1 >= 0     && this->texture[i - 1              ] != 0) && /* left */
-//              (z + 1 < size.z && this->texture[i + size.x         ] != 0) && /* front */
-//              (z - 1 >= 0     && this->texture[i - size.x         ] != 0) && /* back */
-//              (y + 1 < size.y && this->texture[i + size.x * size.z] != 0) && /* up */
-//              (y - 1 >= 0     && this->texture[i - size.x * size.z] != 0));  /* down */
-// }
 
 uint8_t Chunk::getVisibleFaces( int x, int y, int z, int i, const std::array<const uint8_t*, 6>& adjacentChunks ) {
     uint8_t faces = 0x0;
@@ -35,25 +26,19 @@ uint8_t Chunk::getVisibleFaces( int x, int y, int z, int i, const std::array<con
 }
 
 bool    Chunk::isVoxelCulled( int x, int y, int z, int i, const std::array<const uint8_t*, 6>& adjacentChunks ) {
-    bool left, right, front, back, top, down;
-    /* empty */
-    // left  = (adjacentChunks[0] != nullptr && x == 0          ? (adjacentChunks[0][i + (size.x - 1)                  ] != 0) : (texture[i - 1] != 0));
-    // right = (adjacentChunks[1] != nullptr && x == size.x - 1 ? (adjacentChunks[1][i - (size.x - 1)                  ] != 0) : (texture[i + 1] != 0));
-    // back  = (adjacentChunks[2] != nullptr && z == 0          ? (adjacentChunks[2][i + (size.z - 1) * size.x         ] != 0) : (texture[i - size.x] != 0));
-    // front = (adjacentChunks[3] != nullptr && z == size.z - 1 ? (adjacentChunks[3][i - (size.z - 1) * size.x         ] != 0) : (texture[i + size.x] != 0));
-    // down  = (adjacentChunks[4] != nullptr && y == 0          ? (adjacentChunks[4][i + (size.y - 1) * size.x * size.z] != 0) : (texture[i - size.x * size.z] != 0));
-    // top   = (adjacentChunks[5] != nullptr && y == size.y - 1 ? (adjacentChunks[5][i - (size.y - 1) * size.x * size.z] != 0) : (texture[i + size.x * size.z] != 0));
+    uint8_t b = 0x1;
     /* empty with borders on world extremities */
-    left  = (adjacentChunks[0] != nullptr && x == 0          ? (adjacentChunks[0][i + (size.x - 1)                  ] != 0) : (adjacentChunks[0] == nullptr && x == 0          ? 0 : (texture[i - 1] != 0)));
-    right = (adjacentChunks[1] != nullptr && x == size.x - 1 ? (adjacentChunks[1][i - (size.x - 1)                  ] != 0) : (adjacentChunks[1] == nullptr && x == size.x - 1 ? 0 : (texture[i + 1] != 0)));
-    back  = (adjacentChunks[2] != nullptr && z == 0          ? (adjacentChunks[2][i + (size.z - 1) * size.x         ] != 0) : (adjacentChunks[2] == nullptr && z == 0          ? 0 : (texture[i - size.x] != 0)));
-    front = (adjacentChunks[3] != nullptr && z == size.z - 1 ? (adjacentChunks[3][i - (size.z - 1) * size.x         ] != 0) : (adjacentChunks[3] == nullptr && z == size.z - 1 ? 0 : (texture[i + size.x] != 0)));
-    down  = (adjacentChunks[4] != nullptr && y == 0          ? (adjacentChunks[4][i + (size.y - 1) * size.x * size.z] != 0) : (adjacentChunks[4] == nullptr && y == 0          ? 0 : (texture[i - size.x * size.z] != 0)));
-    top   = (adjacentChunks[5] != nullptr && y == size.y - 1 ? (adjacentChunks[5][i - (size.y - 1) * size.x * size.z] != 0) : (adjacentChunks[5] == nullptr && y == size.y - 1 ? 0 : (texture[i + size.x * size.z] != 0)));
-    return (left && right && front && back && top && down);
+    b &= (adjacentChunks[0] != nullptr && x == 0          ? (adjacentChunks[0][i + (size.x - 1)                  ] != 0) : (adjacentChunks[0] == nullptr && x == 0          ? 0 : (texture[i - 1] != 0)));
+    b &= (adjacentChunks[1] != nullptr && x == size.x - 1 ? (adjacentChunks[1][i - (size.x - 1)                  ] != 0) : (adjacentChunks[1] == nullptr && x == size.x - 1 ? 0 : (texture[i + 1] != 0)));
+    b &= (adjacentChunks[2] != nullptr && z == 0          ? (adjacentChunks[2][i + (size.z - 1) * size.x         ] != 0) : (adjacentChunks[2] == nullptr && z == 0          ? 0 : (texture[i - size.x] != 0)));
+    b &= (adjacentChunks[3] != nullptr && z == size.z - 1 ? (adjacentChunks[3][i - (size.z - 1) * size.x         ] != 0) : (adjacentChunks[3] == nullptr && z == size.z - 1 ? 0 : (texture[i + size.x] != 0)));
+    b &= (adjacentChunks[4] != nullptr && y == 0          ? (adjacentChunks[4][i + (size.y - 1) * size.x * size.z] != 0) : (adjacentChunks[4] == nullptr && y == 0          ? 0 : (texture[i - size.x * size.z] != 0)));
+    b &= (adjacentChunks[5] != nullptr && y == size.y - 1 ? (adjacentChunks[5][i - (size.y - 1) * size.x * size.z] != 0) : (adjacentChunks[5] == nullptr && y == size.y - 1 ? 0 : (texture[i + size.x * size.z] != 0)));
+    return b;
 }
 
 void    Chunk::buildMesh( const std::array<const uint8_t*, 6>& adjacentChunks ) {
+    this->meshed = true;
     this->voxels.reserve(this->size.x * this->size.y * this->size.z);
     for (int y = 0; y < this->size.y; ++y)
         for (int z = 0; z < this->size.z; ++z)
@@ -70,8 +55,8 @@ void    Chunk::buildMesh( const std::array<const uint8_t*, 6>& adjacentChunks ) 
 }
 
 void    Chunk::render( Shader shader, Camera& camera ) {
-    if (glm::distance(this->position, camera.getPosition()) > 32*6) // replace by render distance
-        return;
+    // if (glm::distance(this->position, camera.getPosition()) > 32*6) // replace by render distance
+    //     return;
     glm::vec3 size = this->size;
     /* optimisation: view fustrum occlusion */
     if (camera.aabInFustrum(-(this->position + size / 2), size) && this->voxels.size() > 0 && this->texture) {

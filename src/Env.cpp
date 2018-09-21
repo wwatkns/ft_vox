@@ -14,7 +14,7 @@ Env::Env( void ) {
         // this->terrain = new Terrain(6, 48, glm::ivec3(4, 4, 4));
         // this->terrain = new Terrain(20, 64, glm::ivec3(16, 16, 16));
         // this->terrain = new Terrain(12, 128, glm::ivec3(32, 32, 32)); // <- best performances for now
-        this->terrain = new Terrain(4, 64, glm::ivec3(32, 32, 32)); // <- best performances for now
+        this->terrain = new Terrain(12, 64, glm::ivec3(32, 32, 32)); // <- best performances for now
         // this->terrain = new Terrain(5, 64, glm::ivec3(64, 64, 64));
         // this->terrain = new Terrain(5, 196, glm::ivec3(64, 64, 64));
 
@@ -52,10 +52,10 @@ Env::Env( void ) {
 }
 
 Env::~Env( void ) {
-    delete this->terrain;
     for (size_t i = 0; i < this->lights.size(); ++i)
         delete this->lights[i];
     // delete this->skybox;
+    delete this->terrain;
     delete this->controller;
     if (glIsTexture(this->skyboxTexture))
         glDeleteTextures(1, &this->skyboxTexture);
@@ -89,7 +89,7 @@ void	Env::initGlfwWindow( size_t width, size_t height ) {
 
 void    Env::setupController( void ) {
     this->controller->setKeyProperties(GLFW_KEY_P, eKeyMode::toggle, 1, 1000);
-    this->controller->setKeyProperties(GLFW_KEY_F, eKeyMode::instant, 1, 1000);
+    this->controller->setKeyProperties(GLFW_KEY_F, eKeyMode::toggle, 1, 1000);
 }
 
 void    Env::framebufferSizeCallback( GLFWwindow* window, int width, int height ) {

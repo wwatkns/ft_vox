@@ -13,13 +13,25 @@ Terrain::Terrain( uint8_t renderDistance, uint maxHeight, const glm::ivec3& chun
 }
 
 Terrain::~Terrain( void ) {
+    /* clean framebuffers */
+    glDeleteFramebuffers(1, &this->chunkGenerationFbo.fbo);
+    /* clean textures */
+    glDeleteTextures(1, &this->noiseSampler);
+    glDeleteTextures(1, &this->chunkGenerationFbo.id);
+    /* clean buffers */
+    glDeleteBuffers(1, &this->chunkGenerationRenderingQuad.vao);
+    glDeleteBuffers(1, &this->chunkGenerationRenderingQuad.vbo);
+    glDeleteBuffers(1, &this->chunkGenerationRenderingQuad.ebo);
+    delete this->chunkGenerationShader;
+    free(this->dataBuffer);
+    this->dataBuffer = NULL;
 }
 
 glm::vec3   Terrain::getChunkPosition( const glm::vec3& position ) {
     glm::vec3 chunkPosition;
     // ceil the y position to max height
     chunkPosition.x = std::floor(position.x / (float)this->chunkSize.x);
-    chunkPosition.y = std::max(std::min(std::floor(position.y / (float)this->chunkSize.y), this->maxHeight / (float)this->chunkSize.y), 0.0f);
+    chunkPosition.y = std::max(std::min(std::floor(position.y / (float)this->chunkSize.y), this->maxHeight / (float)this->chunkSize.y - 1.0f), 0.0f);
     chunkPosition.z = std::floor(position.z / (float)this->chunkSize.z);
     return chunkPosition;
 }
@@ -39,18 +51,28 @@ void    Terrain::generateChunkTextures( const Camera& camera ) {
     /*  naive algorithm : 
         * iterate on all the positions around player in render distance range and create chunk if it does not exist.
     */
+
+    // std::cout << "pos: (" << this->getChunkPosition(camera.getPosition()).x << ", " << this->getChunkPosition(camera.getPosition()).y << ", "<< this->getChunkPosition(camera.getPosition()).z << ")" << std::endl;
+
     int height = this->maxHeight / this->chunkSize.y;
     int dist = this->renderDistance / 2;
-    for (int y = -height; y < 0; ++y)
+    for (int y = 0; y < height; ++y)
         for (int z = -dist; z < dist; ++z)
             for (int x = -dist; x < dist; ++x) {
                 /* if chunk was never generated */
                 Key key = { this->getChunkPosition(camera.getPosition()) + glm::vec3(x, y, z) };
                 if (this->chunks.find(key) == this->chunks.end()) {
-                    glm::vec3 position = (this->getChunkPosition(camera.getPosition()) + glm::vec3(x, y, z)) * (glm::vec3)this->chunkSize;
+                    /* if we maximum number of chunks sotred is reached, delete one to make room */
+                    if (this->chunks.size() >= renderDistance * renderDistance * height) {
+                        std::cout << "deleting chunk" << std::endl;
+                        // this->chunks.erase( {  } );
+                        // for (int i = 0)
+                    }
+
+                    glm::vec3 position = key.p * (glm::vec3)this->chunkSize;
                     this->renderChunkGeneration(position, this->dataBuffer);
                     this->chunks.insert( { key, new Chunk(position, this->chunkSize, this->dataBuffer) } );
-                    std::cout << "> BUILDING: (" << key.p.x << ", " << key.p.y << ", "<< key.p.z << ")" << std::endl;
+                    // std::cout << "> BUILDING: (" << key.p.x << ", " << key.p.y << ", "<< key.p.z << ")" << std::endl;
                 }
             }
 }
@@ -58,6 +80,7 @@ void    Terrain::generateChunkTextures( const Camera& camera ) {
 void    Terrain::generateChunkMeshes( void ) {
     for (std::pair<Key, Chunk*> chunk : this->chunks) {
         if (!chunk.second->isMeshed()) {
+            std::cout << "meshing" << std::endl;
             std::array<const uint8_t*, 6> adjacentChunks = {
                 ( chunks.find({chunk.first.p - glm::vec3(1, 0, 0)}) != chunks.end() ? chunks[{chunk.first.p - glm::vec3(1, 0, 0)}]->getTexture() : nullptr), // left
                 ( chunks.find({chunk.first.p + glm::vec3(1, 0, 0)}) != chunks.end() ? chunks[{chunk.first.p + glm::vec3(1, 0, 0)}]->getTexture() : nullptr), // right
@@ -110,7 +133,6 @@ void    Terrain::render( Shader shader, Camera& camera ) {
 }
 
 void    Terrain::update( const Camera& camera ) {
-    // this->chunks.clear();
     this->generateChunkTextures(camera);
     this->generateChunkMeshes();
 }

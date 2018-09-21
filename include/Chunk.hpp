@@ -35,7 +35,7 @@ public:
     const GLuint&       getVbo( void ) const { return vbo; };
     const glm::vec3&    getPosition( void ) const { return position; };
     const uint8_t*      getTexture( void ) const { return texture; };
-    const bool          isMeshed( void ) const { return !voxels.empty(); };
+    const bool          isMeshed( void ) const { return meshed; };
 
 private:
     GLuint              vao;        // Vertex Array Object
@@ -45,6 +45,7 @@ private:
     glm::vec3           position;
     glm::ivec3          size;
     uint8_t*            texture;    /* the texture outputed by the chunk generation shader */
+    bool                meshed;
 
     void                setup( int mode );
     void                createModelTransform( const glm::vec3& position );

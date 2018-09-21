@@ -70,7 +70,7 @@ void    Camera::handleInputs( const std::array<tKey, N_KEY>& keys, const tMouse&
     this->invViewMatrix = glm::inverse(this->viewMatrix);
     this->last = std::chrono::steady_clock::now();
 
-    // if (this->updateFustrum)
+    if (this->updateFustrum)
         this->updateFustrumPlanes();
     this->updateFustrum = false;
 }

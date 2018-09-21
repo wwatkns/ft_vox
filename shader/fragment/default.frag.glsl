@@ -80,10 +80,10 @@ void main() {
     //     result += computePointLight(pointLights[i], gNormal, FragPos, viewDir);
 
     // FragColor = vec4(result, material.opacity);
-    // if (mod(FragPos.x, 32.0)*mod(FragPos.y, 32.0)*mod(FragPos.z, 32.0) <= 0.5) {
-    //     FragColor = vec4(vec3(0.0, 1.0, 0.2), 1.);
-    //     return;
-    // }
+    if (mod(FragPos.x, 32.0)*mod(FragPos.y, 32.0)*mod(FragPos.z, 32.0) <= 0.5) {
+        FragColor = vec4(vec3(0.0, 1.0, 0.2), 1.);
+        return;
+    }
     FragColor = vec4((Normal * 0.5 + 0.4) * vec3(1., 0.5, 0.5), 1.0);
 }
 
