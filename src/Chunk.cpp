@@ -25,12 +25,12 @@ Chunk::~Chunk( void ) {
 
 uint8_t Chunk::getVisibleFaces( int x, int y, int z, int i, const std::array<const uint8_t*, 6>& adjacentChunks ) {
     uint8_t faces = 0x0;
-    faces |= ((x + 1 < size.x && this->texture[i + 1              ] == 0) || adjacentChunks[1] == nullptr) << 5; // right
-    faces |= ((x - 1 >= 0     && this->texture[i - 1              ] == 0) || adjacentChunks[0] == nullptr) << 4; // left
-    faces |= ((z + 1 < size.z && this->texture[i + size.x         ] == 0) || adjacentChunks[3] == nullptr) << 3; // front
-    faces |= ((z - 1 >= 0     && this->texture[i - size.x         ] == 0) || adjacentChunks[2] == nullptr) << 2; // back
-    faces |= ((y + 1 < size.y && this->texture[i + size.x * size.z] == 0) || adjacentChunks[5] == nullptr) << 1; // up
-    faces |= ((y - 1 >= 0     && this->texture[i - size.x * size.z] == 0) || adjacentChunks[4] == nullptr);      // down
+    faces |=  (x + 1 < size.x && this->texture[i + 1              ] == 0) << 5; // right
+    faces |=  (x - 1 >= 0     && this->texture[i - 1              ] == 0) << 4; // left
+    faces |=  (z + 1 < size.z && this->texture[i + size.x         ] == 0) << 3; // front
+    faces |=  (z - 1 >= 0     && this->texture[i - size.x         ] == 0) << 2; // back
+    faces |= ((y + 1 < size.y && this->texture[i + size.x * size.z] == 0) || (y == size.y - 1 && adjacentChunks[5] == nullptr) ) << 1; // up
+    faces |= ((y - 1 >= 0     && this->texture[i - size.x * size.z] == 0) || (y == 0          && adjacentChunks[4] == nullptr) );      // down
     return faces;
 }
 
