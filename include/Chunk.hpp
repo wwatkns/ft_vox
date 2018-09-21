@@ -35,6 +35,7 @@ public:
     const GLuint&       getVbo( void ) const { return vbo; };
     const glm::vec3&    getPosition( void ) const { return position; };
     const uint8_t*      getTexture( void ) const { return texture; };
+    const bool          isMeshed( void ) const { return !voxels.empty(); };
 
 private:
     GLuint              vao;        // Vertex Array Object

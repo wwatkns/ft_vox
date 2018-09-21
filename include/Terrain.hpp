@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 #include <cmath>
+#include <algorithm>
 #include <array>
 #include <unordered_map>
 
@@ -50,11 +51,13 @@ struct  Key {
 };
 
 struct KeyHash {
+    /* /!\ positions are stored as 16 bits integers, so world position should not go further than 2^15 = 32768 in any direction
+    */
     uint64_t operator()(const Key &k) const {
         uint64_t    hash = 0;
-        hash |= (int)k.p.x;
-        hash |= (int)k.p.y << 8;
-        hash |= (int)k.p.z << 16;
+        hash |= static_cast<uint64_t>(static_cast<int>(k.p.x) + 0x7FFF);
+        hash |= static_cast<uint64_t>(static_cast<int>(k.p.y) + 0x7FFF) << 16;
+        hash |= static_cast<uint64_t>(static_cast<int>(k.p.z) + 0x7FFF) << 32;
         return (hash);
     }
 };
@@ -65,12 +68,13 @@ public:
     Terrain( uint8_t renderDistance = 10, uint maxHeight = 256, const glm::ivec3& chunkSize = glm::ivec3(32, 32, 32) );
     ~Terrain( void );
 
-    void                        update( void );
+    void                        update( const Camera& camera );
     void                        render( Shader shader, Camera& camera );
 
-    void                        generateChunkTextures( void );
+    void                        generateChunkTextures( const Camera& camera );
     void                        generateChunkMeshes( void );
     void                        deleteChunk( void );
+    glm::vec3                   getChunkPosition( const glm::vec3& position );
 
     /* getters */
     // const std::vector<Chunk*>   getChunks( void ) const { return (chunks); };
@@ -81,7 +85,6 @@ private:
              and we have a O(1), worst O(log n) lookup time
     */
     std::unordered_map<Key, Chunk*, KeyHash>   chunks;
-    // std::vector<Chunk*>         chunks;
     glm::ivec3                  chunkSize;
     uint8_t                     renderDistance; /* in chunks */
     uint                        maxHeight;

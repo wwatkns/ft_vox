@@ -70,6 +70,8 @@ void    Chunk::buildMesh( const std::array<const uint8_t*, 6>& adjacentChunks ) 
 }
 
 void    Chunk::render( Shader shader, Camera& camera ) {
+    if (glm::distance(this->position, camera.getPosition()) > 32*6) // replace by render distance
+        return;
     glm::vec3 size = this->size;
     /* optimisation: view fustrum occlusion */
     if (camera.aabInFustrum(-(this->position + size / 2), size) && this->voxels.size() > 0 && this->texture) {

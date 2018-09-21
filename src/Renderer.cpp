@@ -132,7 +132,7 @@ void    Renderer::renderMeshes( void ) {
     // glBindTexture(GL_TEXTURE_2D, this->shadowDepthMap.id);
 
     this->env->getTerrain()->render(*this->shader["default"], this->camera);
-    // this->env->getTerrain()->update();
+    this->env->getTerrain()->update(this->camera);
     
     /* copy the depth buffer to a texture (used in raymarch shader for geometry occlusion of raymarched objects) */
     // glBindTexture(GL_TEXTURE_2D, this->depthMap.id);
