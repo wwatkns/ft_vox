@@ -70,6 +70,7 @@ float   fbm3d(in vec3 st, in float amplitude, in float frequency, in int octaves
 // }
 
 #define DIRT 1/255.
+#define GRASS 2/255.
 #define STONE 3/255.
 #define BEDROCK 4/255.
 #define COAL 5/255.
@@ -81,21 +82,24 @@ float   map(vec3 p) {
     /* bedrock level */
     if (p.y == 0 || fbm3d(p, 1.0, 20.0, 2, 1.5, 0.5) > p.y/3.)
         return BEDROCK;
-
     /* terrain and caves */
-    int g1 = int(fbm3d(p, 0.5, 0.025, 4, 1.5, 0.5) > 0.45 * (p.y / 128.));
-    int g2 = int(fbm3d(p, 0.35, 0.12, 4, 1.0, 0.35) > 0.1);
-    int g0 = int(fbm3d(p, 0.5, 0.01, 6, 1.7, 0.5) > p.y / 255.);
+    int g0 = int(fbm3d(p, 0.5, 0.01, 6, 1.7, 0.5) > p.y / 255.);            /*  low-frequency landscape */
+    int g1 = int(fbm3d(p, 0.5, 0.025, 4, 1.5, 0.5) > 0.45 * (p.y / 128.));  /* high-frequency landscape */
+    int g2 = int(fbm3d(p, 0.35, 0.12, 4, 1.0, 0.35) > 0.1);                 /* cave system (TMP, should implement more complex algorithm) */
     /* resource distribution */
     int g3 = int(fbm3d(p+ 10., 0.29, 0.2, 4, 1.5, 0.4) < 0.1 && p.y < 130);/* common distribution : coal    */
     int g4 = int(fbm3d(p-100., 0.40, 0.2, 4, 1.5,0.33) < 0.1 && p.y < 64); /* medium distribution : iron    */
     int g5 = int(fbm3d(p+100., 0.40, 0.2, 4, 1.5,0.38) < 0.1 && p.y < 16); /*   rare distribution : diamond */
-    /* stone */
-    int g6 = int(fbm3d(p + 6, 0.25, 0.07, 6, 2., 0.2) > p.y / 255.);      // stone repartition
+    /* stone (we use the same values for fbm as landscape but with a vertical offset) */
+    int g7 = int(fbm3d(p+vec3(0,20,0), 0.5, 0.01, 5, 1.7, 0.5) > p.y / 255.);            /*  low-frequency landscape */
+    int g8 = int(fbm3d(p+vec3(0,20,0), 0.5, 0.025, 3, 1.5, 0.5) > 0.45 * (p.y / 128.));  /* high-frequency landscape */
+
+    int g9 = int(fbm3d(p+vec3(0,5,0), 0.5, 0.01, 5, 1.7, 0.5) > p.y / 255.);            /*  low-frequency landscape */
+    int g10 = int(fbm3d(p+vec3(0,5,0), 0.5, 0.025, 3, 1.5, 0.5) > 0.45 * (p.y / 128.));  /* high-frequency landscape */
 
     res = float(g0 & g1 & g2) * DIRT;
 
-    res = (res == DIRT  && g6 == 1 ? STONE : res );
+    res = (res == DIRT  && (g7 & g8 & g9 & g10) == 1 ? STONE : res );
     res = (res == STONE && g4 == 1 ? IRON : res );
     res = (res == STONE && g3 == 1 ? COAL : res );
     res = (res == STONE && g5 == 1 ? DIAMOND : res );

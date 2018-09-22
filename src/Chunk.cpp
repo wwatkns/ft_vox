@@ -50,7 +50,8 @@ void    Chunk::buildMesh( const std::array<const uint8_t*, 6>& adjacentChunks ) 
                         
                         // uint8_t b = (uint8_t)(this->texture[i] / 255 - 1);
                         uint8_t b = (uint8_t)(this->texture[i] - 1);
-                        if (b == 0 && this->texture[i + size.x * size.z] == 0)
+                        // if (b == 0 && this->texture[i + size.x * size.z] == 0)
+                        if (b == 0 && !(adjacentChunks[5] != nullptr && y == size.y - 1 ? (adjacentChunks[5][i - (size.y - 1) * size.x * size.z] != 0) : (adjacentChunks[5] == nullptr && y == size.y - 1 ? 0 : (texture[i + size.x * size.z] != 0))))
                             b = 1;
                         this->voxels.push_back( { glm::vec3(x, y, z), b, visibleFaces } );
 
