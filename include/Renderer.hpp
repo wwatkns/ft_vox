@@ -48,16 +48,13 @@ private:
     Env*            env;
     Camera          camera;
     tShaderMap      shader;
-    tDepthMap       depthMap;       // depth-map for the view fustrum
-    tDepthMap       shadowDepthMap; // depth-map for the shadows
+    tDepthMap       depthMap;       /* custom depth-map */
     tDepthMap       renderbuffer;
     glm::mat4       lightSpaceMat;
-    int             useShadows;
     float           framerate;
 
     tTimePoint      lastTime;
 
-    void    initShadowDepthMap( const size_t width = 1024, const size_t height = 1024 );
     void    initDepthMap( void );
     void    initRenderbuffer( void );
 

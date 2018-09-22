@@ -42,7 +42,7 @@ Env::Env( void ) {
 Env::~Env( void ) {
     for (size_t i = 0; i < this->lights.size(); ++i)
         delete this->lights[i];
-    // delete this->skybox;
+    delete this->skybox;
     delete this->terrain;
     delete this->controller;
     if (glIsTexture(this->skyboxTexture))

@@ -1,7 +1,7 @@
 #include "Camera.hpp"
 #include "glm/ext.hpp"
 
-Camera::Camera( float fov, float aspect, float near, float far ) : aspect(aspect), fov(fov), near(near), far(far) {
+Camera::Camera( float fov, float aspect, float near, float far ) : aspect(aspect), fov(fov), near(near), far(far), pitch(0), yaw(0) {
     this->projectionMatrix = glm::perspective(glm::radians(fov), aspect, near, far);
     this->invProjectionMatrix = glm::inverse(this->projectionMatrix);
     this->position = glm::vec3(0.0f, 0.0f, 3.0f);
@@ -9,8 +9,6 @@ Camera::Camera( float fov, float aspect, float near, float far ) : aspect(aspect
     this->viewMatrix = glm::lookAt(this->position, this->position + this->cameraFront, glm::vec3(0.0f, 1.0f, 0.0f));
     this->viewProjectionMatrix = this->projectionMatrix * this->viewMatrix;
     this->invViewMatrix = glm::inverse(this->viewMatrix);
-    this->pitch = 0;
-    this->yaw = 0;
     this->last = std::chrono::steady_clock::now();
     this->speed = 0.02;
     this->speedmod = 1.0;
@@ -106,6 +104,8 @@ tMilliseconds   Camera::getElapsedMilliseconds( tTimePoint last ) {
     return (std::chrono::steady_clock::now() - last);
 }
 
+/*  Fustrum-culling setup and intersect functions
+*/
 void    Camera::updateFustrumPlanes( void ) {
     glm::mat3 transform = this->viewProjectionMatrix;
     glm::vec3 cameraUp = glm::normalize(glm::row(transform, 1));
@@ -114,8 +114,6 @@ void    Camera::updateFustrumPlanes( void ) {
     float tang = std::tan(glm::radians(this->fov / 2.0f));
     float near_h = tang * near;
 	float near_w = near_h * this->aspect;
-    // float far_h = tang * far;
-	// float far_w = far_h * this->aspect;
 
     glm::vec3 p, n;
 	glm::vec3 nc = this->position + this->cameraFront * near;
@@ -183,7 +181,7 @@ bool    Camera::aabInFustrum( const glm::vec3& p, const glm::vec3& size ) {
 		if (distancePointToPlane(getVertexMax(p, size / 2, this->planes[i].normal), this->planes[i]) < 0)
 			return false;
 		else if (distancePointToPlane(getVertexMin(p, size / 2, this->planes[i].normal), this->planes[i]) < 0)
-            continue; /* intersect */
+            continue; /* intersect with fustrum */
 	}
 	return true;
 }
