@@ -12,6 +12,7 @@
 #include "Exception.hpp"
 #include "Controller.hpp"
 #include "Terrain.hpp"
+#include "Cubemap.hpp"
 #include "Light.hpp"
 #include "utils.hpp"
 
@@ -31,7 +32,7 @@ public:
     Controller*                         getController( void ) { return (controller); };
     Terrain*                            getTerrain( void ) { return (terrain); };
     std::vector<Light*>&                getLights( void ) { return (lights); };
-    // Model*                              getSkybox( void ) { return (skybox); };
+    Cubemap*                            getSkybox( void ) { return (skybox); };
     Light*                              getDirectionalLight( void );
 
 private:
@@ -39,7 +40,7 @@ private:
     Controller*                     controller;
     Terrain*                        terrain;
     std::vector<Light*>             lights;
-    // Model*                          skybox;
+    Cubemap*                        skybox;
     unsigned int                    skyboxTexture;
     unsigned int                    noiseTexture;
 

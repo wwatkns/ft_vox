@@ -13,16 +13,13 @@
 #include <algorithm>
 #include <array>
 #include <unordered_map>
+#include <queue>
 
 #include "Exception.hpp"
 #include "Shader.hpp"
 #include "Camera.hpp"
 #include "utils.hpp"
 #include "Chunk.hpp"
-
-/*
-    Handles the logic for the chunks rendering/creating/deletion
-*/
 
 typedef struct  sVertex {
     glm::vec3   Position;
@@ -51,7 +48,7 @@ struct  Key {
 };
 
 struct KeyHash {
-    /* /!\ positions are stored as 16 bits integers, so world position should not go further than 2^15 = 32768 in any direction
+    /* /!\ positions are stored as 16 bits integers, so world position should not go further than 2^15 = 32768 chunks in any direction
     */
     uint64_t operator()(const Key &k) const {
         uint64_t    hash = 0;
@@ -65,7 +62,7 @@ struct KeyHash {
 class Terrain {
 
 public:
-    Terrain( uint8_t renderDistance = 10, uint maxHeight = 256, const glm::ivec3& chunkSize = glm::ivec3(32, 32, 32) );
+    Terrain( uint renderDistance = 160, uint maxHeight = 256, const glm::ivec3& chunkSize = glm::ivec3(32, 32, 32) );
     ~Terrain( void );
 
     void                        update( const Camera& camera );
@@ -76,17 +73,10 @@ public:
     void                        deleteChunk( void );
     glm::vec3                   getChunkPosition( const glm::vec3& position );
 
-    /* getters */
-    // const std::vector<Chunk*>   getChunks( void ) const { return (chunks); };
-
 private:
-    /* TODO: store chunks in an unordered_map with key describing xyz position of chunk
-             that way we can check easily if a chunk for a given position is already loaded,
-             and we have a O(1), worst O(log n) lookup time
-    */
     std::unordered_map<Key, Chunk*, KeyHash>   chunks;
     glm::ivec3                  chunkSize;
-    uint8_t                     renderDistance; /* in chunks */
+    uint                        renderDistance; /* in blocs */
     uint                        maxHeight;
     Shader*                     chunkGenerationShader;
     tMesh                       chunkGenerationRenderingQuad;
@@ -98,17 +88,3 @@ private:
     void                        setupChunkGenerationFbo( void );
     void                        renderChunkGeneration( const glm::vec3& position, uint8_t* data );
 };
-
-/*  chunk_volume * number_of_chunks
-    32*32*32*12*12*8 / 1000000
-    37.74 Mo
-
-    So we have a max number of chunks stored in RAM, let's arbitrarily set that number to 2048 (16*16*8 chunks), that's ~67 Mo of RAM.
-    Now, we build all the needed chunks around us in world no further than `renderDistance`.
-
-    We populate the loaded chunks lists until we reach maximum capacity. In that case, we remove the elements that are the most distant to
-    the player (we could have a tree as data structure to keep it fast) and insert the new loaded chunk.
-
-    We could also perform a culling check for chunks to generate around player, so that we don't generate them even if they are in
-    renderDistance radius if they're occluded.
-*/

@@ -63,6 +63,7 @@ void	Renderer::loop( void ) {
 
         /* rendering passes */
         // this->updateShadowDepthMap();
+        this->renderSkybox();
         this->renderLights();
         this->renderMeshes();
         // this->renderSkybox();
@@ -141,15 +142,15 @@ void    Renderer::renderMeshes( void ) {
     // glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, 0, 0, this->depthMap.width, this->depthMap.height, 0);
 }
 
-// void    Renderer::renderSkybox( void ) {
-//     glDepthFunc(GL_LEQUAL);
-//     this->shader["skybox"]->use();
-//     this->shader["skybox"]->setMat4UniformValue("view", glm::mat4(glm::mat3(this->camera.getViewMatrix())));
-//     this->shader["skybox"]->setMat4UniformValue("projection", this->camera.getProjectionMatrix());
-//     /* render skybox */
-//     this->env->getSkybox()->render(*this->shader["skybox"]);
-//     glDepthFunc(GL_LESS);
-// }
+void    Renderer::renderSkybox( void ) {
+    glDepthFunc(GL_LEQUAL);
+    this->shader["skybox"]->use();
+    this->shader["skybox"]->setMat4UniformValue("view", glm::mat4(glm::mat3(this->camera.getViewMatrix())));
+    this->shader["skybox"]->setMat4UniformValue("projection", this->camera.getProjectionMatrix());
+    /* render skybox */
+    this->env->getSkybox()->render(*this->shader["skybox"]);
+    glDepthFunc(GL_LESS);
+}
 
 void    Renderer::initShadowDepthMap( const size_t width, const size_t height ) {
     this->shadowDepthMap.width = width;

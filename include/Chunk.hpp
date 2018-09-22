@@ -29,13 +29,14 @@ public:
     ~Chunk( void );
 
     void                buildMesh( const std::array<const uint8_t*, 6>& adjacentChunks );
-    void                render( Shader shader, Camera& camera );
+    void                render( Shader shader, Camera& camera, uint renderDistance );
     /* getters */
     const GLuint&       getVao( void ) const { return vao; };
     const GLuint&       getVbo( void ) const { return vbo; };
     const glm::vec3&    getPosition( void ) const { return position; };
     const uint8_t*      getTexture( void ) const { return texture; };
     const bool          isMeshed( void ) const { return meshed; };
+    const bool          isOutOfRange( void ) const { return outOfRange; };
 
 private:
     GLuint              vao;        // Vertex Array Object
@@ -46,6 +47,7 @@ private:
     glm::ivec3          size;
     uint8_t*            texture;    /* the texture outputed by the chunk generation shader */
     bool                meshed;
+    bool                outOfRange;
 
     void                setup( int mode );
     void                createModelTransform( const glm::vec3& position );

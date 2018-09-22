@@ -10,22 +10,10 @@ Env::Env( void ) {
             throw Exception::InitError("glad initialization failed");
         this->controller = new Controller(this->window.ptr);
 
-        // this->terrain = new Terrain(6, 48, glm::ivec3(16, 16, 16));
-        // this->terrain = new Terrain(6, 48, glm::ivec3(4, 4, 4));
-        // this->terrain = new Terrain(20, 64, glm::ivec3(16, 16, 16));
-        // this->terrain = new Terrain(12, 128, glm::ivec3(32, 32, 32)); // <- best performances for now
-        this->terrain = new Terrain(12, 64, glm::ivec3(32, 32, 32)); // <- best performances for now
-        // this->terrain = new Terrain(5, 64, glm::ivec3(64, 64, 64));
-        // this->terrain = new Terrain(5, 196, glm::ivec3(64, 64, 64));
+        this->terrain = new Terrain(160, 128, glm::ivec3(32, 32, 32)); /* mandatory part */
+        // this->terrain = new Terrain(160, 256, glm::ivec3(32, 32, 32)); /* mandatory part */
+        // this->terrain = new Terrain(224, 256, glm::ivec3(32, 32, 32)); /* Bonus part for render distance */
 
-        // this->skyboxTexture = loadCubemap(std::vector<std::string>{{
-        //     "./resource/CloudyLightRays/CloudyLightRaysLeft2048.png",
-        //     "./resource/CloudyLightRays/CloudyLightRaysRight2048.png",
-        //     "./resource/CloudyLightRays/CloudyLightRaysUp2048.png",
-        //     "./resource/CloudyLightRays/CloudyLightRaysDown2048.png",
-        //     "./resource/CloudyLightRays/CloudyLightRaysFront2048.png",
-        //     "./resource/CloudyLightRays/CloudyLightRaysBack2048.png",
-        // }});
         // this->noiseTexture = loadTexture("./resource/RGBAnoiseMedium.png");
         this->lights = {
             new Light(
@@ -36,14 +24,14 @@ Env::Env( void ) {
                 eLightType::directional
             )
         };
-        // this->skybox = new Model(std::vector<std::string>{{
-        //     "./resource/CloudyLightRays/CloudyLightRaysLeft2048.png",
-        //     "./resource/CloudyLightRays/CloudyLightRaysRight2048.png",
-        //     "./resource/CloudyLightRays/CloudyLightRaysUp2048.png",
-        //     "./resource/CloudyLightRays/CloudyLightRaysDown2048.png",
-        //     "./resource/CloudyLightRays/CloudyLightRaysFront2048.png",
-        //     "./resource/CloudyLightRays/CloudyLightRaysBack2048.png",
-        // }});
+        this->skybox = new Cubemap(std::vector<std::string>{{
+            "./resource/CloudyLightRays/CloudyLightRaysLeft2048.png",
+            "./resource/CloudyLightRays/CloudyLightRaysRight2048.png",
+            "./resource/CloudyLightRays/CloudyLightRaysUp2048.png",
+            "./resource/CloudyLightRays/CloudyLightRaysDown2048.png",
+            "./resource/CloudyLightRays/CloudyLightRaysFront2048.png",
+            "./resource/CloudyLightRays/CloudyLightRaysBack2048.png",
+        }});
 
         this->setupController();
     } catch (const std::exception& err) {

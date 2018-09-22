@@ -1,7 +1,7 @@
 #include "Chunk.hpp"
 #include "glm/ext.hpp"
 
-Chunk::Chunk( const glm::vec3& position, const glm::ivec3& size, const uint8_t* texture ) : position(position), size(size), meshed(false) {
+Chunk::Chunk( const glm::vec3& position, const glm::ivec3& size, const uint8_t* texture ) : position(position), size(size), meshed(false), outOfRange(false) {
     this->createModelTransform(position);
     this->texture = static_cast<uint8_t*>(malloc(sizeof(uint8_t) * size.x * size.y * size.z));
     memcpy(this->texture, texture, size.x * size.y * size.z);
@@ -54,11 +54,12 @@ void    Chunk::buildMesh( const std::array<const uint8_t*, 6>& adjacentChunks ) 
     this->setup(GL_STATIC_DRAW);
 }
 
-void    Chunk::render( Shader shader, Camera& camera ) {
-    // if (glm::distance(this->position, camera.getPosition()) > 32*6) // replace by render distance
-    //     return;
+void    Chunk::render( Shader shader, Camera& camera, uint renderDistance ) {
+    if (glm::distance(this->position * glm::vec3(1,0,1), camera.getPosition() * glm::vec3(1,0,1)) > renderDistance * 1.5) {
+        outOfRange = true;
+        return;
+    }
     glm::vec3 size = this->size;
-    /* optimisation: view fustrum occlusion */
     if (camera.aabInFustrum(-(this->position + size / 2), size) && this->voxels.size() > 0 && this->texture) {
         /* set transform matrix */
         shader.setMat4UniformValue("_mvp", camera.getViewProjectionMatrix() * this->transform);

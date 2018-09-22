@@ -19,7 +19,7 @@ INC_PATH = ./include/ \
 CC_FLGS = -std=c++11 -Ofast
 CC_LIBS = -lassimp -lglfw3 -framework AppKit -framework OpenGL -framework IOKit -framework CoreVideo
 
-SRC_NAME = main.cpp Light.cpp Terrain.cpp Chunk.cpp Camera.cpp Controller.cpp Env.cpp Renderer.cpp Shader.cpp utils.cpp
+SRC_NAME = main.cpp Light.cpp Cubemap.cpp Terrain.cpp Chunk.cpp Camera.cpp Controller.cpp Env.cpp Renderer.cpp Shader.cpp utils.cpp
 OBJ_NAME = $(SRC_NAME:.cpp=.o)
 
 SRC = $(addprefix $(SRC_PATH), $(SRC_NAME))
