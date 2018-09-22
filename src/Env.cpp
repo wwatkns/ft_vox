@@ -10,8 +10,7 @@ Env::Env( void ) {
             throw Exception::InitError("glad initialization failed");
         this->controller = new Controller(this->window.ptr);
 
-        this->terrain = new Terrain(160, 128, glm::ivec3(32, 32, 32)); /* mandatory part */
-        // this->terrain = new Terrain(160, 256, glm::ivec3(32, 32, 32)); /* mandatory part */
+        this->terrain = new Terrain(160, 256, glm::ivec3(32, 32, 32)); /* mandatory part */
         // this->terrain = new Terrain(224, 256, glm::ivec3(32, 32, 32)); /* Bonus part for render distance */
 
         // this->noiseTexture = loadTexture("./resource/RGBAnoiseMedium.png");

@@ -69,11 +69,43 @@ float   fbm3d(in vec3 st, in float amplitude, in float frequency, in int octaves
 //     return m_dist;
 // }
 
-// float   map(vec2 p) {
-//     float res = 0.8 - fbm2d(p, 1.0, 1.0, 6, 2.2, 0.5) * 1.3;
-//     res = fbm2d(p + res, 0.3, 1.0, 5, 1., 0.5);
-//     return res;
-// }
+#define DIRT 1/255.
+#define STONE 3/255.
+#define BEDROCK 4/255.
+#define COAL 5/255.
+#define IRON 6/255.
+#define DIAMOND 7/255.
+
+float   map(vec3 p) {
+    float res;
+    /* bedrock level */
+    if (p.y == 0 || fbm3d(p, 1.0, 20.0, 2, 1.5, 0.5) > p.y/3.)
+        return BEDROCK;
+
+    /* terrain and caves */
+    int g1 = int(fbm3d(p, 0.5, 0.025, 4, 1.5, 0.5) > 0.45 * (p.y / 128.));
+    int g2 = int(fbm3d(p, 0.35, 0.12, 4, 1.0, 0.35) > 0.1);
+    int g0 = int(fbm3d(p, 0.5, 0.01, 6, 1.7, 0.5) > p.y / 255.);
+    /* resource distribution */
+    int g3 = int(fbm3d(p+ 10., 0.29, 0.2, 4, 1.5, 0.4) < 0.1 && p.y < 130);/* common distribution : coal    */
+    int g4 = int(fbm3d(p-100., 0.40, 0.2, 4, 1.5,0.33) < 0.1 && p.y < 64); /* medium distribution : iron    */
+    int g5 = int(fbm3d(p+100., 0.40, 0.2, 4, 1.5,0.38) < 0.1 && p.y < 16); /*   rare distribution : diamond */
+    /* stone */
+    int g6 = int(fbm3d(p + 6, 0.25, 0.07, 6, 2., 0.2) > p.y / 255.);      // stone repartition
+
+    res = float(g0 & g1 & g2) * DIRT;
+
+    res = (res == DIRT  && g6 == 1 ? STONE : res );
+    res = (res == STONE && g4 == 1 ? IRON : res );
+    res = (res == STONE && g3 == 1 ? COAL : res );
+    res = (res == STONE && g5 == 1 ? DIAMOND : res );
+
+    // res = g3 * COAL; // tmp
+    // res = g4 * IRON; // tmp
+    // res = g5 * DIAMOND; // tmp
+    // res = g0 * DIRT;
+    return res;
+}
 
 /* 3d volume texture */
 void    main() {
@@ -85,7 +117,7 @@ void    main() {
 
     // vec3 worldPos = (chunk - 1.0 + pos) * chunkSize;
     vec3 worldPos = (chunkPosition + pos * chunkSize);
-    FragColor.r = float(fbm3d(worldPos, 0.5, 0.025, 4, 1.5, 0.5) > 0.45 * (worldPos.y / 64.) );
+    FragColor.r = sqrt(map(worldPos)); // values from [0..255] (0..1) are in normalized fixed-point representation, a simple sqrt() fixes that.
 
     // FragColor.r  = (mod(pos.z,  0.125) <= 1/chunkSize.z ? 0.0 : 1.0);
     // FragColor.r *= (mod(pos.x,  0.125) <= 1/chunkSize.x ? 0.0 : 1.0);

@@ -43,7 +43,7 @@ in vec2 TexCoords;
 flat in int Id;
 // in vec4 FragPosLightSpace;
 
-#define MAX_POINT_LIGHTS 8
+// #define MAX_POINT_LIGHTS 8
 
 /* uniforms */
 uniform sampler2D atlas;
@@ -53,18 +53,22 @@ uniform sDirectionalLight directionalLight;
 // uniform int nPointLights;
 
 sMaterial material = sMaterial(
-    vec3(0.15),
+    vec3(0.4),
     vec3(1.0),
-    vec3(0.35),
+    vec3(0.0),
     0.0,
     1.0
 );
 
 /* the offsets for the bloc textures (top, bottom, side) */
-const sOffset offsets[3] = sOffset[](
+const sOffset offsets[7] = sOffset[](
     sOffset( vec2(2,0), vec2(2,0), vec2(2,0) ), // 0: dirt
     sOffset( vec2(0,0), vec2(2,0), vec2(3,0) ), // 1: grass
-    sOffset( vec2(1,0), vec2(1,0), vec2(1,0) )  // 2: stone
+    sOffset( vec2(1,0), vec2(1,0), vec2(1,0) ), // 2: stone
+    sOffset( vec2(1,1), vec2(1,1), vec2(1,1) ), // 3: bedrock
+    sOffset( vec2(2,2), vec2(2,2), vec2(2,2) ), // 4: coal
+    sOffset( vec2(1,2), vec2(1,2), vec2(1,2) ), // 5: iron
+    sOffset( vec2(2,3), vec2(2,3), vec2(2,3) )  // 6: diamond
 );
 const vec2 atlasSize = vec2(24, 42);
 

@@ -47,12 +47,14 @@ void    Chunk::buildMesh( const std::array<const uint8_t*, 6>& adjacentChunks ) 
                 if (this->texture[i] != 0) { /* if voxel is not air */
                     if (!isVoxelCulled(x, y, z, i, adjacentChunks)) {
                         uint8_t visibleFaces = getVisibleFaces(x, y, z, i, adjacentChunks);
-                        // std::cout << (int)this->texture[i] << std::endl;
-                        uint8_t b = (uint8_t)(this->texture[i] / 255 - 1);
+                        
+                        // uint8_t b = (uint8_t)(this->texture[i] / 255 - 1);
+                        uint8_t b = (uint8_t)(this->texture[i] - 1);
                         if (b == 0 && this->texture[i + size.x * size.z] == 0)
                             b = 1;
-
                         this->voxels.push_back( { glm::vec3(x, y, z), b, visibleFaces } );
+
+                        // this->voxels.push_back( { glm::vec3(x, y, z), this->texture[i], visibleFaces } );
                     }
                 }
             }

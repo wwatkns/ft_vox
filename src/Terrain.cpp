@@ -167,6 +167,7 @@ void    Terrain::setupChunkGenerationFbo( void ) {
     /* create color texture */
     glGenTextures(1, &this->chunkGenerationFbo.id);
     glBindTexture(GL_TEXTURE_2D, this->chunkGenerationFbo.id);
+    // glPixelStorei(GL_UNPACK_ALIGNMENT, 8);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, this->chunkGenerationFbo.width, this->chunkGenerationFbo.height, 0, GL_RED, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
