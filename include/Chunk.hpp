@@ -29,7 +29,7 @@ public:
     ~Chunk( void );
 
     void                buildMesh( const std::array<const uint8_t*, 6>& adjacentChunks );
-    void                render( Shader shader, Camera& camera, uint renderDistance );
+    void                render( Shader shader, Camera& camera, GLuint textureAtlas, uint renderDistance );
     /* getters */
     const GLuint&       getVao( void ) const { return vao; };
     const GLuint&       getVbo( void ) const { return vbo; };
@@ -56,8 +56,7 @@ private:
 
 };
 
-/*
-    Mesh creation optimisations :
+/*  Mesh creation optimisations :
     * don't save empty voxels
     * voxel occlusion (don't save/render voxels that are surrounded by solid voxels)
     * back-face occlusion (don't render faces not facing the camera)

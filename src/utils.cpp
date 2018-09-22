@@ -17,7 +17,6 @@ glm::vec2    mousePosToClipSpace( const glm::dvec2& pos, int winWidth, int winHe
     return (mouse);
 }
 
-// TMP
 void    createCube( std::vector<GLfloat>& vertices, std::vector<unsigned int>& indices ) {
     vertices = {{
         -0.5, -0.5,  0.5,   0.0, 1.0, // front top-left
@@ -39,7 +38,7 @@ void    createCube( std::vector<GLfloat>& vertices, std::vector<unsigned int>& i
     }};
 }
 
-GLuint  loadTexture( const char* filename ) {
+GLuint  loadTexture( const char* filename, GLuint textureMode ) {
     std::cout << "> texture: " << filename << std::endl;
     GLuint textureID;
     glGenTextures(1, &textureID);
@@ -60,8 +59,8 @@ GLuint  loadTexture( const char* filename ) {
 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, textureMode);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, textureMode);
         stbi_image_free(data);
     }
     else {

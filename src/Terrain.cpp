@@ -6,6 +6,7 @@ Terrain::Terrain( uint renderDistance, uint maxHeight, const glm::ivec3& chunkSi
     this->setupChunkGenerationFbo();
     this->chunkGenerationShader = new Shader("./shader/vertex/screenQuad.vert.glsl", "./shader/fragment/generateChunk.frag.glsl");
     this->noiseSampler = loadTexture("./resource/RGBAnoiseMedium.png");
+    this->textureAtlas = loadTexture("./resource/terrain.png", GL_NEAREST);
     this->dataBuffer = static_cast<uint8_t*>(malloc(sizeof(uint8_t) * this->chunkGenerationFbo.width * this->chunkGenerationFbo.height));
 }
 
@@ -14,6 +15,7 @@ Terrain::~Terrain( void ) {
     glDeleteFramebuffers(1, &this->chunkGenerationFbo.fbo);
     /* clean textures */
     glDeleteTextures(1, &this->noiseSampler);
+    glDeleteTextures(1, &this->textureAtlas);
     glDeleteTextures(1, &this->chunkGenerationFbo.id);
     /* clean buffers */
     glDeleteBuffers(1, &this->chunkGenerationRenderingQuad.vao);
@@ -107,13 +109,13 @@ void    Terrain::renderChunkGeneration( const glm::vec3& position, uint8_t* data
     glEnable(GL_DEPTH_TEST);
 }
 
-void    Terrain::render( Shader shader, Camera& camera ) {
+void    Terrain::renderChunks( Shader shader, Camera& camera ) {
     for (std::pair<Key, Chunk*> chunk : this->chunks) {
-        chunk.second->render(shader, camera, renderDistance);
+        chunk.second->render(shader, camera, this->textureAtlas, renderDistance);
     }
 }
 
-void    Terrain::update( const Camera& camera ) {
+void    Terrain::updateChunks( const Camera& camera ) {
     this->generateChunkTextures(camera);
     this->generateChunkMeshes();
 }

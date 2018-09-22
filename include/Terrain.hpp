@@ -65,8 +65,8 @@ public:
     Terrain( uint renderDistance = 160, uint maxHeight = 256, const glm::ivec3& chunkSize = glm::ivec3(32, 32, 32) );
     ~Terrain( void );
 
-    void                        update( const Camera& camera );
-    void                        render( Shader shader, Camera& camera );
+    void                        updateChunks( const Camera& camera );
+    void                        renderChunks( Shader shader, Camera& camera );
 
     void                        generateChunkTextures( const Camera& camera );
     void                        generateChunkMeshes( void );
@@ -82,6 +82,7 @@ private:
     tMesh                       chunkGenerationRenderingQuad;
     tRenderBuffer               chunkGenerationFbo;
     GLuint                      noiseSampler;
+    GLuint                      textureAtlas;
     uint8_t*                    dataBuffer;
 
     void                        setupChunkGenerationRenderingQuad( void );

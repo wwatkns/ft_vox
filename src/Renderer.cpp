@@ -23,8 +23,8 @@ void	Renderer::loop( void ) {
     glEnable(GL_DEPTH_TEST); /* z-buffering */
     glEnable(GL_FRAMEBUFFER_SRGB); /* gamma correction */
     glEnable(GL_BLEND); /* transparency */
-    // glEnable(GL_CULL_FACE); /* face culling (back faces are not rendered) */
-    // glCullFace(GL_BACK);
+    glEnable(GL_CULL_FACE); /* face culling (back faces are not rendered) */
+    glCullFace(GL_BACK);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     while (!glfwWindowShouldClose(this->env->getWindow().ptr)) {
         glfwPollEvents();
@@ -74,8 +74,8 @@ void    Renderer::renderMeshes( void ) {
     this->shader["default"]->setVec3UniformValue("viewPos", this->camera.getPosition());
     // this->shader["default"]->setMat4UniformValue("lightSpaceMat", this->lightSpaceMat);
 
-    this->env->getTerrain()->render(*this->shader["default"], this->camera);
-    this->env->getTerrain()->update(this->camera);
+    this->env->getTerrain()->renderChunks(*this->shader["default"], this->camera);
+    this->env->getTerrain()->updateChunks(this->camera);
     
     /* copy the depth buffer to a texture (used in raymarch shader for geometry occlusion of raymarched objects) */
     glBindTexture(GL_TEXTURE_2D, this->depthMap.id);
@@ -85,11 +85,13 @@ void    Renderer::renderMeshes( void ) {
 
 void    Renderer::renderSkybox( void ) {
     glDepthFunc(GL_LEQUAL);
+    glDisable(GL_CULL_FACE);
     this->shader["skybox"]->use();
     this->shader["skybox"]->setMat4UniformValue("view", glm::mat4(glm::mat3(this->camera.getViewMatrix())));
     this->shader["skybox"]->setMat4UniformValue("projection", this->camera.getProjectionMatrix());
     /* render skybox */
     this->env->getSkybox()->render(*this->shader["skybox"]);
+    glEnable(GL_CULL_FACE);
     glDepthFunc(GL_LESS);
 }
 

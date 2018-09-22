@@ -9,17 +9,22 @@ flat in int gVisibleFaces[];
 
 out vec3 FragPos;
 out vec3 Normal;
+out vec2 TexCoords;
 flat out int Id;
 
 uniform vec3 viewPos;
 
 void    AddQuad(vec4 center, vec4 dy, vec4 dx) {
+    TexCoords = vec2(0, 1);
     gl_Position = center + ( dx - dy);
     EmitVertex();
+    TexCoords = vec2(1, 1);
     gl_Position = center + (-dx - dy);
     EmitVertex();
+    TexCoords = vec2(0, 0);
     gl_Position = center + ( dx + dy);
     EmitVertex();
+    TexCoords = vec2(1, 0);
     gl_Position = center + (-dx + dy);
     EmitVertex();
     EndPrimitive();

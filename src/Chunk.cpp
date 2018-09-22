@@ -54,7 +54,7 @@ void    Chunk::buildMesh( const std::array<const uint8_t*, 6>& adjacentChunks ) 
     this->setup(GL_STATIC_DRAW);
 }
 
-void    Chunk::render( Shader shader, Camera& camera, uint renderDistance ) {
+void    Chunk::render( Shader shader, Camera& camera, GLuint textureAtlas, uint renderDistance ) {
     if (glm::distance(this->position * glm::vec3(1,0,1), camera.getPosition() * glm::vec3(1,0,1)) > renderDistance * 1.5) {
         outOfRange = true;
         return;
@@ -64,6 +64,10 @@ void    Chunk::render( Shader shader, Camera& camera, uint renderDistance ) {
         /* set transform matrix */
         shader.setMat4UniformValue("_mvp", camera.getViewProjectionMatrix() * this->transform);
         shader.setMat4UniformValue("_model", this->transform);
+        /* texture atlas */
+        glActiveTexture(GL_TEXTURE0);
+        shader.setIntUniformValue("atlas", 0);
+        glBindTexture(GL_TEXTURE_2D, textureAtlas);
         /* render */
         glBindVertexArray(this->vao);
         glDrawArrays(GL_POINTS, 0, this->voxels.size());

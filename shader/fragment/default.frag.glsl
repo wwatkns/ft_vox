@@ -28,35 +28,21 @@ struct sMaterial {
     float opacity;
 };
 
-// struct sState {
-//     bool use_shadows;
-//     bool use_texture_diffuse;
-//     bool use_texture_normal;
-//     bool use_texture_specular;
-//     bool use_texture_emissive;
-// };
-
 /* input variables */
 in vec3 FragPos;
 in vec3 Normal;
+in vec2 TexCoords;
 flat in int Id;
-// in vec2 TexCoords;
 // in vec4 FragPosLightSpace;
 
 #define MAX_POINT_LIGHTS 8
 
 /* uniforms */
-// uniform sampler2D shadowMap;
-// uniform sampler2D texture_diffuse1;
-// uniform sampler2D texture_normal1; // not used anymore
-// uniform sampler2D texture_specular1;
-// uniform sampler2D texture_emissive1;
-
+uniform sampler2D atlas;
 uniform vec3 cameraPos;
 uniform sDirectionalLight directionalLight;
 // uniform sPointLight pointLights[MAX_POINT_LIGHTS];
 // uniform int nPointLights;
-// uniform sState state;
 
 sMaterial material = sMaterial(
     vec3(0.0),
@@ -71,6 +57,18 @@ vec3    computeDirectionalLight( sDirectionalLight light, vec3 normal, vec3 view
 // vec3    computePointLight( sPointLight light, vec3 normal, vec3 fragPos,vec3 viewDir );
 // float   computeShadows( vec4 fragPosLightSpace );
 
+void    getBlocTexture( void ) {
+    /* grass bloc */
+    if (Id == 1) {
+        texture(atlas, vec2(0, 0) / 256.); // top
+        texture(atlas, vec2(2, 0) / 256.); // bottom
+        texture(atlas, vec2(3, 0) / 256.); // side
+    }
+    /* stone bloc */
+    if (Id == 2) {
+        texture(atlas, vec2(1, 0) / 256.);
+    }
+}
 
 void main() {
     vec3 viewDir = normalize(cameraPos - FragPos);
@@ -84,7 +82,8 @@ void main() {
     //     FragColor = vec4(vec3(0.0, 1.0, 0.2), 1.);
     //     return;
     // }
-    FragColor = vec4((Normal * 0.5 + 0.4) * vec3(1., 0.5, 0.5), 1.0);
+    // FragColor = vec4((Normal * 0.5 + 0.4) * vec3(1., 0.5, 0.5), 1.0);
+    FragColor = vec4(texture(atlas, TexCoords).xyz, 1.0);
 }
 
 vec3 computeDirectionalLight( sDirectionalLight light, vec3 normal, vec3 viewDir, vec4 fragPosLightSpace ) {
@@ -94,16 +93,10 @@ vec3 computeDirectionalLight( sDirectionalLight light, vec3 normal, vec3 viewDir
     /* specular */
     vec3 halfwayDir = normalize(lightDir + viewDir);
     float spec = pow(max(dot(normal, halfwayDir), 0.0), material.shininess);
-
     /* compute terms */
     vec3 ambient  = light.ambient  * material.diffuse;
     vec3 diffuse  = light.diffuse  * diff * material.diffuse;
     vec3 specular = light.specular * spec * material.specular;
-
-    // if (state.use_shadows) {
-    //     float shadow  = computeShadows(fragPosLightSpace);
-    //     return (gEmissive + ambient + (1.0 - shadow) * (diffuse + specular));
-    // }
     return (material.ambient + ambient + (diffuse + specular));
 }
 
