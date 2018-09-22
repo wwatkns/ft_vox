@@ -9,17 +9,6 @@ struct sDirectionalLight {
     vec3 specular;
 };
 
-// struct sPointLight {
-//     vec3 position;
-//     vec3 ambient;
-//     vec3 diffuse;
-//     vec3 specular;
-
-//     float quadratic;
-//     float constant;
-//     float linear;
-// };
-
 struct sMaterial {
     vec3 ambient;
     vec3 diffuse;
@@ -27,6 +16,25 @@ struct sMaterial {
     float shininess;
     float opacity;
 };
+
+struct sOffset {
+    vec2 top;
+    vec2 bottom;
+    vec2 side;
+};
+
+/*  32bits, 5bits per offset component
+    we can have top x/y, then side x/y, and bottom x/y
+    [______top______|_____side______|____bottom_____]
+    [   x   |   y   |   x   |   y   |   x   |   y   ]..]
+    top_x    = (offset & 0xF8000000) >> 27;
+    top_y    = (offset & 0x7C00000) >> 22;
+    side_x   = (offset & 0x3E0000) >> 17;
+    side_y   = (offset & 0x1F000) >> 12;
+    bottom_x = (offset & 0xF80) >> 7;
+    bottom_y = (offset & 0x7C) >> 2;
+*/
+
 
 /* input variables */
 in vec3 FragPos;
@@ -45,37 +53,33 @@ uniform sDirectionalLight directionalLight;
 // uniform int nPointLights;
 
 sMaterial material = sMaterial(
-    vec3(0.0),
+    vec3(0.15),
     vec3(1.0),
     vec3(0.35),
-    64.0,
+    0.0,
     1.0
 );
 
+/* the offsets for the bloc textures (top, bottom, side) */
+const sOffset offsets[3] = sOffset[](
+    sOffset( vec2(2,0), vec2(2,0), vec2(2,0) ), // 0: dirt
+    sOffset( vec2(0,0), vec2(2,0), vec2(3,0) ), // 1: grass
+    sOffset( vec2(1,0), vec2(1,0), vec2(1,0) )  // 2: stone
+);
+const vec2 atlasSize = vec2(24, 42);
+
 /* prototypes */
 vec3    computeDirectionalLight( sDirectionalLight light, vec3 normal, vec3 viewDir, vec4 fragPosLightSpace );
-// vec3    computePointLight( sPointLight light, vec3 normal, vec3 fragPos,vec3 viewDir );
-// float   computeShadows( vec4 fragPosLightSpace );
 
-void    getBlocTexture( void ) {
-    /* grass bloc */
-    if (Id == 1) {
-        texture(atlas, vec2(0, 0) / 256.); // top
-        texture(atlas, vec2(2, 0) / 256.); // bottom
-        texture(atlas, vec2(3, 0) / 256.); // side
-    }
-    /* stone bloc */
-    if (Id == 2) {
-        texture(atlas, vec2(1, 0) / 256.);
-    }
+vec4    getBlocTexture( void ) {
+    vec2 offset = (Normal.y == 0 ? offsets[Id].side : (Normal.y == 1 ? offsets[Id].top : offsets[Id].bottom));
+    return texture(atlas, (offset + TexCoords) / atlasSize);
 }
 
 void main() {
     vec3 viewDir = normalize(cameraPos - FragPos);
 
     vec3 result = computeDirectionalLight(directionalLight, Normal, viewDir, vec4(0.0));
-    // for (int i = 0; i < nPointLights && i < MAX_POINT_LIGHTS; ++i)
-    //     result += computePointLight(pointLights[i], gNormal, FragPos, viewDir);
 
     // FragColor = vec4(result, material.opacity);
     // if (mod(FragPos.x, 32.0)*mod(FragPos.y, 32.0)*mod(FragPos.z, 32.0) <= 0.5) {
@@ -83,7 +87,7 @@ void main() {
     //     return;
     // }
     // FragColor = vec4((Normal * 0.5 + 0.4) * vec3(1., 0.5, 0.5), 1.0);
-    FragColor = vec4(texture(atlas, TexCoords).xyz, 1.0);
+    FragColor = vec4(getBlocTexture().xyz * result, 1.0);
 }
 
 vec3 computeDirectionalLight( sDirectionalLight light, vec3 normal, vec3 viewDir, vec4 fragPosLightSpace ) {

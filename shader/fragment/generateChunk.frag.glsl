@@ -85,7 +85,7 @@ void    main() {
 
     // vec3 worldPos = (chunk - 1.0 + pos) * chunkSize;
     vec3 worldPos = (chunkPosition + pos * chunkSize);
-    FragColor.r = float(fbm3d(worldPos, 0.5, 0.025, 4, 1.5, 0.5) > 0.5);
+    FragColor.r = float(fbm3d(worldPos, 0.5, 0.025, 4, 1.5, 0.5) > 0.45 * (worldPos.y / 64.) );
 
     // FragColor.r  = (mod(pos.z,  0.125) <= 1/chunkSize.z ? 0.0 : 1.0);
     // FragColor.r *= (mod(pos.x,  0.125) <= 1/chunkSize.x ? 0.0 : 1.0);
