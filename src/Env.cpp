@@ -13,7 +13,6 @@ Env::Env( void ) {
         this->terrain = new Terrain(160, 256, glm::ivec3(32, 32, 32)); /* mandatory part */
         // this->terrain = new Terrain(224, 256, glm::ivec3(32, 32, 32)); /* Bonus part for render distance */
 
-        // this->noiseTexture = loadTexture("./resource/RGBAnoiseMedium.png");
         this->lights = {
             new Light(
                 glm::vec3(30, 30, 18),
@@ -31,6 +30,7 @@ Env::Env( void ) {
             "./resource/CloudyLightRays/CloudyLightRaysFront2048.png",
             "./resource/CloudyLightRays/CloudyLightRaysBack2048.png",
         }});
+        this->postProcess = new PostProcess();
 
         this->setupController();
     } catch (const std::exception& err) {
@@ -41,13 +41,10 @@ Env::Env( void ) {
 Env::~Env( void ) {
     for (size_t i = 0; i < this->lights.size(); ++i)
         delete this->lights[i];
+    delete this->postProcess;
     delete this->skybox;
     delete this->terrain;
     delete this->controller;
-    if (glIsTexture(this->skyboxTexture))
-        glDeleteTextures(1, &this->skyboxTexture);
-    if (glIsTexture(this->noiseTexture))
-        glDeleteTextures(1, &this->noiseTexture);
     glfwDestroyWindow(this->window.ptr);
     glfwTerminate();
 }

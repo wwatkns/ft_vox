@@ -13,6 +13,7 @@
 #include "Controller.hpp"
 #include "Terrain.hpp"
 #include "Cubemap.hpp"
+#include "PostProcess.hpp"
 #include "Light.hpp"
 #include "utils.hpp"
 
@@ -33,6 +34,7 @@ public:
     Terrain*                            getTerrain( void ) { return (terrain); };
     std::vector<Light*>&                getLights( void ) { return (lights); };
     Cubemap*                            getSkybox( void ) { return (skybox); };
+    PostProcess*                        getPostProcess( void ) { return (postProcess); };
     Light*                              getDirectionalLight( void );
 
 private:
@@ -41,8 +43,7 @@ private:
     Terrain*                        terrain;
     std::vector<Light*>             lights;
     Cubemap*                        skybox;
-    unsigned int                    skyboxTexture;
-    unsigned int                    noiseTexture;
+    PostProcess*                    postProcess;
 
     void        initGlfwEnvironment( const std::string& glVersion = "4.0" );
     void        initGlfwWindow( size_t width, size_t height );

@@ -3,7 +3,7 @@
 
 Cubemap::Cubemap( const std::vector<std::string>& paths ) {
     /* load textures */
-    textures.push_back(loadCubemap(paths));
+    textures.push_back(loadCubemapSrgb(paths));
     /* create cube mesh */
     std::vector<float>  v;
     createCube(v, this->indices);

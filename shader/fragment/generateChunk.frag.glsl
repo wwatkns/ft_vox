@@ -80,6 +80,7 @@ float   fbm3d(in vec3 st, in float amplitude, in float frequency, in int octaves
 #define REDSTONE 9/255.
 #define DIAMOND 10/255.
 #define GRAVEL 11/255.
+#define SAND 12/255.
 
 float   map(vec3 p) {
     float res;

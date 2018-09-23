@@ -43,19 +43,21 @@ public:
     void    renderLights( void );
     void    renderMeshes( void );
     void    renderSkybox( void );
+    void    renderPostFxaa( void );
 
 private:
     Env*            env;
     Camera          camera;
     tShaderMap      shader;
     tDepthMap       depthMap;       /* custom depth-map */
-    tDepthMap       renderbuffer;
+    tDepthMap       framebuffer;
     glm::mat4       lightSpaceMat;
     float           framerate;
+    bool            fxaa;
 
     tTimePoint      lastTime;
 
     void    initDepthMap( void );
-    void    initRenderbuffer( void );
+    void    initFramebuffer( void );
 
 };

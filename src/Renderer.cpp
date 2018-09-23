@@ -6,11 +6,14 @@ env(env),
 camera(80, (float)env->getWindow().width / (float)env->getWindow().height, 0.1f, 300.0f) {
     this->shader["default"] = new Shader("./shader/vertex/default.vert.glsl", "./shader/geometry/default.geom.glsl", "./shader/fragment/default.frag.glsl");
     this->shader["skybox"]  = new Shader("./shader/vertex/skybox.vert.glsl", "./shader/fragment/skybox.frag.glsl");
+    this->shader["fxaa"]  = new Shader("./shader/vertex/screenQuad.vert.glsl", "./shader/fragment/FXAA.frag.glsl");
     this->lastTime = std::chrono::steady_clock::now();
     this->framerate = 60.0;
 
-    this->initDepthMap();
-    // this->initRenderbuffer();
+    // this->initDepthMap();
+    this->fxaa = true;
+    if (this->fxaa)
+        this->initFramebuffer();
 }
 
 Renderer::~Renderer( void ) {
@@ -21,24 +24,36 @@ void	Renderer::loop( void ) {
     static int frames = 0;
     static double last = 0.0;
     glEnable(GL_DEPTH_TEST); /* z-buffering */
-    // glEnable(GL_FRAMEBUFFER_SRGB); /* gamma correction */
+    glEnable(GL_FRAMEBUFFER_SRGB); /* gamma correction */
     glEnable(GL_BLEND); /* transparency */
     glEnable(GL_CULL_FACE); /* face culling (back faces are not rendered) */
     glCullFace(GL_BACK);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     while (!glfwWindowShouldClose(this->env->getWindow().ptr)) {
         glfwPollEvents();
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
         this->env->getController()->update();
         this->camera.handleInputs(this->env->getController()->getKeys(), this->env->getController()->getMouse());
 
-        /* rendering passes */
-        this->renderLights();
-        this->renderMeshes();
-        this->renderSkybox();
+        if (this->fxaa) {
+            /* two pass rendering (for FXAA) */
+            glBindFramebuffer(GL_FRAMEBUFFER, this->framebuffer.fbo);
+            glClear(GL_DEPTH_BUFFER_BIT);
+            this->renderLights();
+            this->renderMeshes();
+            this->renderSkybox();
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            this->renderPostFxaa();
+        }
+        else {
+            /* no post-processing */
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            this->renderLights();
+            this->renderMeshes();
+            this->renderSkybox();
+        }
 
         glfwSwapBuffers(this->env->getWindow().ptr);
         /* display framerate */
@@ -78,9 +93,9 @@ void    Renderer::renderMeshes( void ) {
     this->env->getTerrain()->updateChunks(this->camera);
     
     /* copy the depth buffer to a texture (used in raymarch shader for geometry occlusion of raymarched objects) */
-    glBindTexture(GL_TEXTURE_2D, this->depthMap.id);
-    glReadBuffer(GL_FRONT);
-    glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, 0, 0, this->depthMap.width, this->depthMap.height, 0);
+    // glBindTexture(GL_TEXTURE_2D, this->depthMap.id);
+    // glReadBuffer(GL_FRONT);
+    // glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, 0, 0, this->depthMap.width, this->depthMap.height, 0);
 }
 
 void    Renderer::renderSkybox( void ) {
@@ -93,6 +108,15 @@ void    Renderer::renderSkybox( void ) {
     this->env->getSkybox()->render(*this->shader["skybox"]);
     glEnable(GL_CULL_FACE);
     glDepthFunc(GL_LESS);
+}
+
+void    Renderer::renderPostFxaa( void ) {
+    glDisable(GL_DEPTH_TEST);
+    this->shader["fxaa"]->use();
+    this->shader["fxaa"]->setFloatUniformValue("near", this->camera.getNear());
+    this->shader["fxaa"]->setVec2UniformValue("win_size", glm::vec2(this->env->getWindow().width, this->env->getWindow().height));
+    this->env->getPostProcess()->render(*this->shader["fxaa"], this->framebuffer.id);
+    glEnable(GL_DEPTH_TEST);
 }
 
 void    Renderer::initDepthMap( void ) {
@@ -116,26 +140,32 @@ void    Renderer::initDepthMap( void ) {
     glDrawBuffer(GL_NONE);
     glReadBuffer(GL_NONE);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void    Renderer::initRenderbuffer( void ) { 
-    this->renderbuffer.width = this->env->getWindow().width;
-    this->renderbuffer.height = this->env->getWindow().height;
-
-    /* create RenderBuffer */
-    glGenRenderbuffers(1, &this->renderbuffer.id);
-    glBindRenderbuffer(GL_RENDERBUFFER, this->renderbuffer.id);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA8, this->renderbuffer.width, this->renderbuffer.height);
-
-    /* create FrameBuffer, with renderbuffer binded */
-    glGenFramebuffers(1, &this->renderbuffer.fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, this->renderbuffer.fbo);
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, this->renderbuffer.id);
-    /* attach depth-buffer component that is also associated to another FBO (one depth-buffer, multiple Fbos) */
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, this->depthMap.id, 0);
-
+void    Renderer::initFramebuffer( void ) {
+    /* create FBO (FrameBuffer Object) */
+    glGenFramebuffers(1, &this->framebuffer.fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, this->framebuffer.fbo);
+    /* create a texture */
+    glGenTextures(1, &this->framebuffer.id);
+    glBindTexture(GL_TEXTURE_2D, this->framebuffer.id);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, env->getWindow().width, env->getWindow().height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    /* bind the texture to the FBO as a color attachment */
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, this->framebuffer.id, 0);
+    
+    /* create a renderbuffer object for depth and stencil attachment (not using it) */
+    unsigned int    rbo;
+    glGenRenderbuffers(1, &rbo);
+    glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, env->getWindow().width, env->getWindow().height);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+    /* check if FBO-kun is doing fine */
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         return;
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    /* unbind FBO as safety */
     glBindRenderbuffer(GL_RENDERBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
 }
