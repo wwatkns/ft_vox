@@ -61,14 +61,18 @@ sMaterial material = sMaterial(
 );
 
 /* the offsets for the bloc textures (top, bottom, side) */
-const sOffset offsets[7] = sOffset[](
-    sOffset( vec2(2,0), vec2(2,0), vec2(2,0) ), // 0: dirt
-    sOffset( vec2(0,0), vec2(2,0), vec2(3,0) ), // 1: grass
-    sOffset( vec2(1,0), vec2(1,0), vec2(1,0) ), // 2: stone
-    sOffset( vec2(1,1), vec2(1,1), vec2(1,1) ), // 3: bedrock
-    sOffset( vec2(2,2), vec2(2,2), vec2(2,2) ), // 4: coal
-    sOffset( vec2(1,2), vec2(1,2), vec2(1,2) ), // 5: iron
-    sOffset( vec2(2,3), vec2(2,3), vec2(2,3) )  // 6: diamond
+const sOffset offsets[11] = sOffset[](
+    sOffset( vec2(2, 0), vec2(2, 0), vec2(2, 0) ), // 0: dirt
+    sOffset( vec2(0, 0), vec2(2, 0), vec2(3, 0) ), // 1: grass
+    sOffset( vec2(1, 0), vec2(1, 0), vec2(1, 0) ), // 2: stone
+    sOffset( vec2(1, 1), vec2(1, 1), vec2(1, 1) ), // 3: bedrock
+    sOffset( vec2(2, 2), vec2(2, 2), vec2(2, 2) ), // 4: coal ore
+    sOffset( vec2(1, 2), vec2(1, 2), vec2(1, 2) ), // 5: iron ore
+    sOffset( vec2(0, 2), vec2(0, 2), vec2(0, 2) ), // 6: gold ore
+    sOffset( vec2(0,10), vec2(0,10), vec2(0,10) ), // 7: lapis ore
+    sOffset( vec2(3, 3), vec2(3, 3), vec2(3, 3) ), // 8: redstone ore
+    sOffset( vec2(2, 3), vec2(2, 3), vec2(2, 3) ), // 9: diamond ore
+    sOffset( vec2(3, 1), vec2(3, 1), vec2(3, 1) )  //10: gravel
 );
 const vec2 atlasSize = vec2(24, 42);
 

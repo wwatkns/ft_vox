@@ -56,22 +56,56 @@ void    main() {
     Id = gId[0];
     FragPos = gFragPos[0];
 
+
+    // Normal = vec3( 1.0, 0.0, 0.0);
+    // if ( (gVisibleFaces[0] & 0x20) != 0 && dot(Normal, (FragPos + dx.xyz) - viewPos) < 0) /* right */
+    //     AddQuad(center + dx, dy, dz);
+    // Normal = vec3(-1.0, 0.0, 0.0);
+    // if ( (gVisibleFaces[0] & 0x10) != 0 && dot(Normal, (FragPos - dx.xyz) - viewPos) < 0) /* left */
+    //     AddQuad2(center - dx, dz, dy);
+    // Normal = vec3( 0.0, 1.0, 0.0);
+    // if ( (gVisibleFaces[0] & 0x02) != 0 && dot(Normal, (FragPos + dy.xyz) - viewPos) < 0) /* top */
+    //     AddQuad(center + dy, dz, dx);
+    // Normal = vec3( 0.0,-1.0, 0.0);
+    // if ( (gVisibleFaces[0] & 0x01) != 0 && dot(Normal, (FragPos - dy.xyz) - viewPos) < 0) /* bottom */
+    //     AddQuad(center - dy, dx, dz);
+    // Normal = vec3( 0.0, 0.0, 1.0);
+    // if ( (gVisibleFaces[0] & 0x08) != 0 && dot(Normal, (FragPos + dz.xyz) - viewPos) < 0) /* front */
+    //     AddQuad2(center + dz, dx, dy);
+    // Normal = vec3( 0.0, 0.0,-1.0);
+    // if ( (gVisibleFaces[0] & 0x04) != 0 && dot(Normal, (FragPos - dz.xyz) - viewPos) < 0) /* back */
+    //     AddQuad(center - dz, dy, dx);
+
+    /* fixes visual issue */
     Normal = vec3( 1.0, 0.0, 0.0);
-    if ( (gVisibleFaces[0] & 0x20) != 0 && dot(Normal, (FragPos + dx.xyz) - viewPos) <= 0.0)
-        AddQuad(center + dx, dy, dz);
-    Normal = vec3(-1.0, 0.0, 0.0);
-    if ( (gVisibleFaces[0] & 0x10) != 0 && dot(Normal, (FragPos - dx.xyz) - viewPos) <= 0.0)
-        AddQuad2(center - dx, dz, dy);
+    if (dot(Normal, (FragPos + dx.xyz) - viewPos) < 0) {
+        if ( (gVisibleFaces[0] & 0x20) != 0) /* right */
+            AddQuad(center + dx, dy, dz);
+    }
+    else {
+        Normal = vec3(-1.0, 0.0, 0.0);
+        if ( (gVisibleFaces[0] & 0x10) != 0) /* left */
+            AddQuad2(center - dx, dz, dy);
+    }
     Normal = vec3( 0.0, 1.0, 0.0);
-    if ( (gVisibleFaces[0] & 0x02) != 0 && dot(Normal, (FragPos + dy.xyz) - viewPos) <= 0.0)
-        AddQuad(center + dy, dz, dx);
-    Normal = vec3( 0.0,-1.0, 0.0);
-    if ( (gVisibleFaces[0] & 0x01) != 0 && dot(Normal, (FragPos - dy.xyz) - viewPos) <= 0.0)
-        AddQuad(center - dy, dx, dz);
+    if (dot(Normal, (FragPos + dy.xyz) - viewPos) < 0) {
+        if ( (gVisibleFaces[0] & 0x02) != 0) /* top */
+            AddQuad(center + dy, dz, dx);
+    }
+    else {
+        Normal = vec3( 0.0,-1.0, 0.0);
+        if ( (gVisibleFaces[0] & 0x01) != 0) /* bottom */
+            AddQuad(center - dy, dx, dz);
+    }
     Normal = vec3( 0.0, 0.0, 1.0);
-    if ( (gVisibleFaces[0] & 0x08) != 0 && dot(Normal, (FragPos + dz.xyz) - viewPos) <= 0.0)
-        AddQuad2(center + dz, dx, dy);
-    Normal = vec3( 0.0, 0.0,-1.0);
-    if ( (gVisibleFaces[0] & 0x04) != 0 && dot(Normal, (FragPos - dz.xyz) - viewPos) <= 0.0)
-        AddQuad(center - dz, dy, dx);
+    if (dot(Normal, (FragPos + dz.xyz) - viewPos) < 0) {
+        if ( (gVisibleFaces[0] & 0x08) != 0) /* front */
+            AddQuad2(center + dz, dx, dy);
+    }
+    else {
+        Normal = vec3( 0.0, 0.0,-1.0);
+        if ( (gVisibleFaces[0] & 0x04) != 0) /* back */
+            AddQuad(center - dz, dy, dx);
+    }
+
 }

@@ -10,7 +10,7 @@ Camera::Camera( float fov, float aspect, float near, float far ) : aspect(aspect
     this->viewProjectionMatrix = this->projectionMatrix * this->viewMatrix;
     this->invViewMatrix = glm::inverse(this->viewMatrix);
     this->last = std::chrono::steady_clock::now();
-    this->speed = 0.02;
+    this->speed = 0.02; //0.005;
     this->speedmod = 1.0;
 
     this->updateFustrumPlanes();
