@@ -134,7 +134,6 @@ GLuint  loadTextureMipmapSrgb( const std::vector<std::string>& paths ) {
                 case 3: format = GL_RGB; break;
                 case 4: format = GL_RGBA; break;
             };
-            std::cout << i << std::endl;
             glTexImage2D(GL_TEXTURE_2D, i, internal_format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
             stbi_image_free(data);
         }

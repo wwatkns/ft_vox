@@ -6,7 +6,6 @@ Terrain::Terrain( uint renderDistance, uint maxHeight, const glm::ivec3& chunkSi
     this->setupChunkGenerationFbo();
     this->chunkGenerationShader = new Shader("./shader/vertex/screenQuad.vert.glsl", "./shader/fragment/generateChunk.frag.glsl");
     this->noiseSampler = loadTexture("./resource/RGBAnoiseMedium.png");
-    // this->textureAtlas = loadTextureSrgb("./resource/terrain.png", GL_NEAREST);
     this->textureAtlas = loadTextureMipmapSrgb(std::vector<std::string>{{
         "./resource/terrain.png",
         "./resource/terrain-1.png",

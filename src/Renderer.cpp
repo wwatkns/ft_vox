@@ -11,7 +11,7 @@ camera(80, (float)env->getWindow().width / (float)env->getWindow().height, 0.1f,
     this->framerate = 60.0;
 
     // this->initDepthMap();
-    this->fxaa = true;
+    this->fxaa = false;
     if (this->fxaa)
         this->initFramebuffer();
 }

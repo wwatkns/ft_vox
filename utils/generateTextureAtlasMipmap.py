@@ -18,8 +18,8 @@ def parseArguments():
 args = parseArguments()
 
 img = misc.imread(args.texture)
-nh = h = int(args.height);
-nw = w = int(args.width);
+nh = h = int(args.height)
+nw = w = int(args.width)
 level = 0
 while (nh > 1 and nw > 1):
     level += 1
