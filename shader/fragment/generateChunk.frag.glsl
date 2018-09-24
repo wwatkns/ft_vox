@@ -91,7 +91,9 @@ float   map(vec3 p) {
     /* terrain and caves */
     int g0 = int(fbm3d(p, 0.5, 0.01, 6, 1.7, 0.5) > p.y / 255.);            /*  low-frequency landscape */
     int g1 = int(fbm3d(p, 0.5, 0.025, 4, 1.5, 0.5) > 0.45 * (p.y / 128.));  /* high-frequency landscape */
-    int g2 = int(fbm3d(p, 0.35, 0.12, 4, 1.0, 0.35) > 0.1);                 /* cave system (TMP, should implement more complex algorithm) */
+    // int g2 = int(fbm3d(p, 0.35, 0.12, 4, 1.0, 0.35) > 0.1);                 /* cave system (TMP, should implement more complex algorithm) */
+    int g2 = int(fbm3d(p, 2.5, 0.15, 3, 1.0, 0.01) > 0.6);                 /* cave system, low-freq */
+    int g13 = int(fbm3d(p * vec3(1,1.4,1), 3., 0.08, 5, 5.0, 0.05) > 0.6);                 /* cave system, high-freq */
     /* resource distribution */
     int g3 = int(fbm3d(p+340., 0.29, 0.20, 4, 1.5, 0.37) < 0.1 && p.y < 130);/* coal */
     int g4 = int(fbm3d(p-100., 0.37, 0.30, 4, 1.8, 0.30) < 0.1 && p.y < 64); /* iron */
@@ -108,7 +110,7 @@ float   map(vec3 p) {
     int g8 = int(fbm3d(p+40, 0.35, 0.18, 4, 1.0, 0.2) < 0.05 + (1.0-p.y/96.)*0.05);
     int g9 = int(fbm3d(p-70, 0.48, 0.14, 4, 1.0, 0.2) < 0.05 + (1.0-p.y/200.)*0.05);
 
-    res = float(g0 & g1 & g2) * DIRT;
+    res = float(g0 & g1 & g2 & g13) * DIRT;
 
     res = (res == DIRT  && g7 == 1 ? STONE : res );
     res = (res == STONE && g5 == 1 ? DIAMOND : res );
@@ -120,7 +122,7 @@ float   map(vec3 p) {
     res = (res == STONE && g8 == 1 ? DIRT : res );
     res = (res == STONE && g9 == 1 ? GRAVEL : res );
 
-    // res = g3 * COAL; // tmp
+    // res = (g2 & g13) * COAL; // tmp
     // res = g4 * IRON; // tmp
     // res = g5 * DIAMOND; // tmp
     // res = g13 * SAND;
@@ -137,11 +139,9 @@ void    main() {
 
     // vec3 worldPos = (chunk - 1.0 + pos) * chunkSize;
     vec3 worldPos = (chunkPosition + pos * chunkSize);
-    FragColor.r = sqrt(map(worldPos)); // values from [0..255] (0..1) are in normalized fixed-point representation, a simple sqrt() fixes that.
+    // FragColor.r = sqrt(map(worldPos)); // values from [0..255] (0..1) are in normalized fixed-point representation, a simple sqrt() fixes that.
 
-    // FragColor.r  = (mod(pos.z,  0.125) <= 1/chunkSize.z ? 0.0 : 1.0);
-    // FragColor.r *= (mod(pos.x,  0.125) <= 1/chunkSize.x ? 0.0 : 1.0);
-    // FragColor.r *= (mod(pos.y, 0.0625) <= 1/chunkSize.y ? 0.0 : 1.0);
+    FragColor.r = sqrt(int(sin(pos.x) * sin(pos.z) < pos.y && worldPos.y < 32.) * STONE);
 }
 
 /* 2d height-map example */

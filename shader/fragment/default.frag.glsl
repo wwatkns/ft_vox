@@ -41,6 +41,7 @@ in vec3 FragPos;
 in vec3 Normal;
 in vec2 TexCoords;
 flat in int Id;
+in float Ao;
 // in vec4 FragPosLightSpace;
 
 // #define MAX_POINT_LIGHTS 8
@@ -96,7 +97,8 @@ void main() {
     //     return;
     // }
     // FragColor = vec4((Normal * 0.5 + 0.4) * vec3(1., 0.5, 0.5), 1.0);
-    FragColor = vec4(getBlocTexture().xyz * result, 1.0);
+    // FragColor = vec4(getBlocTexture().xyz * result * (Ao+0.25), 1.0);
+    FragColor = vec4(getBlocTexture().xyz  * (Ao+0.25), 1.0);
 }
 
 vec3 computeDirectionalLight( sDirectionalLight light, vec3 normal, vec3 viewDir, vec4 fragPosLightSpace ) {

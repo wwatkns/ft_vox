@@ -6,40 +6,66 @@ in mat4 mvp[];
 in vec3 gFragPos[];
 flat in int gId[];
 flat in int gVisibleFaces[];
+flat in int gAo_xz[];
+flat in int gAo_y[];
 
 out vec3 FragPos;
 out vec3 Normal;
 out vec2 TexCoords;
+out float Ao;
 flat out int Id;
 
 uniform vec3 viewPos;
 
-void    AddQuad(vec4 center, vec4 dy, vec4 dx) {
+/* 2 3
+   0 1 */
+void    AddQuad(vec4 center, vec4 dy, vec4 dx, int ao) {
+    // Ao = ((ao & 0xC0) >> 6)/3; // 0
+    // Ao = ((ao & 0x30) >> 4)/3; // 1
+    // Ao = ((ao & 0x0C) >> 2)/3; // 2
+    // Ao = ((ao & 0x03) >> 0)/3; // 3
+
+    Ao = ((ao & 0x03) >> 0)/3; // 3
     TexCoords = vec2(0, 1);
     gl_Position = center + ( dx - dy);
     EmitVertex();
+
+    Ao = ((ao & 0x0C) >> 2)/3; // 2
     TexCoords = vec2(1, 1);
     gl_Position = center + (-dx - dy);
     EmitVertex();
+
+    Ao = ((ao & 0xC0) >> 6)/3; // 0
     TexCoords = vec2(0, 0);
     gl_Position = center + ( dx + dy);
     EmitVertex();
+
+    Ao = ((ao & 0x30) >> 4)/3; // 1
     TexCoords = vec2(1, 0);
     gl_Position = center + (-dx + dy);
     EmitVertex();
     EndPrimitive();
 }
 
-void    AddQuad2(vec4 center, vec4 dy, vec4 dx) {
+/* 2 0
+   3 1 */
+void    AddQuad2(vec4 center, vec4 dy, vec4 dx, int ao) {
+    Ao = ((ao & 0x30) >> 4) / 3; // 1
     TexCoords = vec2(1, 0);
     gl_Position = center + ( dx - dy);
     EmitVertex();
+
+    Ao = ((ao & 0x0C) >> 2) / 3; // 2
     TexCoords = vec2(1, 1);
     gl_Position = center + (-dx - dy);
     EmitVertex();
+
+    Ao = ((ao & 0xC0) >> 6) / 3; // 0
     TexCoords = vec2(0, 0);
     gl_Position = center + ( dx + dy);
     EmitVertex();
+
+    Ao = ((ao & 0x03) >> 0) / 3; // 3
     TexCoords = vec2(0, 1);
     gl_Position = center + (-dx + dy);
     EmitVertex();
@@ -80,32 +106,32 @@ void    main() {
     Normal = vec3( 1.0, 0.0, 0.0);
     if (dot(Normal, (FragPos + dx.xyz) - viewPos) < 0) {
         if ( (gVisibleFaces[0] & 0x20) != 0) /* right */
-            AddQuad(center + dx, dy, dz);
+            AddQuad(center + dx, dy, dz, (gAo_xz[0] & 0xFF000000) >> 24);
     }
     else {
         Normal = vec3(-1.0, 0.0, 0.0);
         if ( (gVisibleFaces[0] & 0x10) != 0) /* left */
-            AddQuad2(center - dx, dz, dy);
+            AddQuad2(center - dx, dz, dy, (gAo_xz[0] & 0x00FF0000) >> 16);
     }
     Normal = vec3( 0.0, 1.0, 0.0);
     if (dot(Normal, (FragPos + dy.xyz) - viewPos) < 0) {
         if ( (gVisibleFaces[0] & 0x02) != 0) /* top */
-            AddQuad(center + dy, dz, dx);
+            AddQuad(center + dy, dz, dx, (gAo_y[0] & 0x0000FF00) >> 8);
     }
     else {
         Normal = vec3( 0.0,-1.0, 0.0);
         if ( (gVisibleFaces[0] & 0x01) != 0) /* bottom */
-            AddQuad(center - dy, dx, dz);
+            AddQuad(center - dy, dx, dz, (gAo_y[0] & 0x000000FF));
     }
     Normal = vec3( 0.0, 0.0, 1.0);
     if (dot(Normal, (FragPos + dz.xyz) - viewPos) < 0) {
         if ( (gVisibleFaces[0] & 0x08) != 0) /* front */
-            AddQuad2(center + dz, dx, dy);
+            AddQuad2(center + dz, dx, dy, (gAo_xz[0] & 0x0000FF00) >> 8);
     }
     else {
         Normal = vec3( 0.0, 0.0,-1.0);
         if ( (gVisibleFaces[0] & 0x04) != 0) /* back */
-            AddQuad(center - dz, dy, dx);
+            AddQuad(center - dz, dy, dx, (gAo_xz[0] & 0x000000FF));
     }
 
 }

@@ -16,10 +16,18 @@
 #include "Camera.hpp"
 #include "utils.hpp"
 
+typedef struct  sAo {
+    int xz;
+    int y;
+}               tAo;
+
 typedef struct  sPoint {
     glm::vec3   position;
     uint8_t     id;
     uint8_t     visibleFaces;
+    // glm::ivec2  ao;
+    int        ao_xz;
+    int        ao_y;
 }               tPoint;
 
 class Chunk {
@@ -53,6 +61,7 @@ private:
     void                createModelTransform( const glm::vec3& position );
     bool                isVoxelCulled( int x, int y, int z, int i, const std::array<const uint8_t*, 6>& adjacentChunks );
     uint8_t             getVisibleFaces( int x, int y, int z, int i, const std::array<const uint8_t*, 6>& adjacentChunks );
+    tAo                 getVerticesAoValue( int x, int y, int z, int i, const std::array<const uint8_t*, 6>& adjacentChunks, uint8_t visibleFaces );
 
 };
 
@@ -73,3 +82,40 @@ private:
 
 // TODO : chunk management : have a chunksToLoad list, and a maximum number of chunks to generate per frame, that way we can
 //        avoid having big framerate hit in some situations
+
+    // if (visibleFaces & 0x20) {
+    //     ao_xz |= ((int)((p & 0x0F) != 0) + (int)((p & 0x10) != 0) + (int)((p & 0x09) != 0)) << 30; // right:0 !
+    //     ao_xz |= ((int)((p & 0x10) != 0) + (int)((p & 0x11) != 0) + (int)((p & 0x0A) != 0)) << 28; // right:1 !
+    //     ao_xz |= ((int)((p & 0x0A) != 0) + (int)((p & 0x05) != 0) + (int)((p & 0x04) != 0)) << 26; // right:2 !
+    //     ao_xz |= ((int)((p & 0x09) != 0) + (int)((p & 0x04) != 0) + (int)((p & 0x03) != 0)) << 24; // right:3 !
+    // }
+    // if (visibleFaces & 0x10) {
+    //     ao_xz |= ((int)((p & 0x0B) != 0) + (int)((p & 0x13) != 0) + (int)((p & 0x0C) != 0)) << 22; // left:0 !
+    //     ao_xz |= ((int)((p & 0x0C) != 0) + (int)((p & 0x0D) != 0) + (int)((p & 0x08) != 0)) << 20; // left:1 !
+    //     ao_xz |= ((int)((p & 0x08) != 0) + (int)((p & 0x01) != 0) + (int)((p & 0x00) != 0)) << 18; // left:2 !
+    //     ao_xz |= ((int)((p & 0x00) != 0) + (int)((p & 0x07) != 0) + (int)((p & 0x0B) != 0)) << 16; // left:3 !
+    // }
+    // if (visibleFaces & 0x08) {
+    //     ao_xz |= ((int)((p & 0x08) != 0) + (int)((p & 0x0D) != 0) + (int)((p & 0x0E) != 0)) << 14; // front:0 !
+    //     ao_xz |= ((int)((p & 0x0E) != 0) + (int)((p & 0x0F) != 0) + (int)((p & 0x09) != 0)) << 12; // front:1 !
+    //     ao_xz |= ((int)((p & 0x09) != 0) + (int)((p & 0x03) != 0) + (int)((p & 0x02) != 0)) << 10; // front:2 !
+    //     ao_xz |= ((int)((p & 0x08) != 0) + (int)((p & 0x01) != 0) + (int)((p & 0x02) != 0)) <<  8; // front:3 !
+    // }
+    // if (visibleFaces & 0x04) {
+    //     ao_xz |= ((int)((p & 0x0A) != 0) + (int)((p & 0x11) != 0) + (int)((p & 0x12) != 0)) <<  6; // back:0 !
+    //     ao_xz |= ((int)((p & 0x0B) != 0) + (int)((p & 0x13) != 0) + (int)((p & 0x12) != 0)) <<  4; // back:1 !
+    //     ao_xz |= ((int)((p & 0x0B) != 0) + (int)((p & 0x07) != 0) + (int)((p & 0x06) != 0)) <<  2; // back:2 !
+    //     ao_xz |= ((int)((p & 0x0A) != 0) + (int)((p & 0x05) != 0) + (int)((p & 0x06) != 0));       // back:3 !
+    // }
+    // if (visibleFaces & 0x02) {
+    //     ao_y  |= ((int)((p & 0x0C) != 0) + (int)((p & 0x13) != 0) + (int)((p & 0x12) != 0)) << 14; // top:0
+    //     ao_y  |= ((int)((p & 0x12) != 0) + (int)((p & 0x11) != 0) + (int)((p & 0x10) != 0)) << 12; // top:1
+    //     ao_y  |= ((int)((p & 0x10) != 0) + (int)((p & 0x0F) != 0) + (int)((p & 0x0E) != 0)) << 10; // top:2
+    //     ao_y  |= ((int)((p & 0x0E) != 0) + (int)((p & 0x0D) != 0) + (int)((p & 0x0C) != 0)) <<  8; // top:3
+    // }
+    // if (visibleFaces & 0x01) {
+    //     ao_y  |= ((int)((p & 0x00) != 0) + (int)((p & 0x01) != 0) + (int)((p & 0x02) != 0)) <<  6; // bottom:0
+    //     ao_y  |= ((int)((p & 0x02) != 0) + (int)((p & 0x03) != 0) + (int)((p & 0x04) != 0)) <<  4; // bottom:1
+    //     ao_y  |= ((int)((p & 0x04) != 0) + (int)((p & 0x05) != 0) + (int)((p & 0x06) != 0)) <<  2; // bottom:2
+    //     ao_y  |= ((int)((p & 0x06) != 0) + (int)((p & 0x07) != 0) + (int)((p & 0x00) != 0));       // bottom:3
+    // }
