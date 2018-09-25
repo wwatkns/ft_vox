@@ -84,6 +84,7 @@ vec3    computeDirectionalLight( sDirectionalLight light, vec3 normal, vec3 view
 vec4    getBlocTexture( void ) {
     vec2 offset = (Normal.y == 0 ? offsets[Id].side : (Normal.y == 1 ? offsets[Id].top : offsets[Id].bottom));
     return texture(atlas, (offset + TexCoords) / atlasSize);
+    // return vec4(1.0);
 }
 
 void main() {
@@ -97,8 +98,8 @@ void main() {
     //     return;
     // }
     // FragColor = vec4((Normal * 0.5 + 0.4) * vec3(1., 0.5, 0.5), 1.0);
-    // FragColor = vec4(getBlocTexture().xyz * result * (Ao+0.25), 1.0);
-    FragColor = vec4(getBlocTexture().xyz  * (Ao+0.25), 1.0);
+    FragColor = vec4(getBlocTexture().xyz * result * Ao, 1.0);
+    // FragColor = vec4(getBlocTexture().xyz * Ao, 1.0);
 }
 
 vec3 computeDirectionalLight( sDirectionalLight light, vec3 normal, vec3 viewDir, vec4 fragPosLightSpace ) {

@@ -26,8 +26,8 @@ void	Renderer::loop( void ) {
     glEnable(GL_DEPTH_TEST); /* z-buffering */
     glEnable(GL_FRAMEBUFFER_SRGB); /* gamma correction */
     glEnable(GL_BLEND); /* transparency */
-    glEnable(GL_CULL_FACE); /* face culling (back faces are not rendered) */
-    glCullFace(GL_BACK);
+    // glEnable(GL_CULL_FACE); /* face culling (back faces are not rendered) */
+    // glCullFace(GL_BACK);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     while (!glfwWindowShouldClose(this->env->getWindow().ptr)) {
         glfwPollEvents();

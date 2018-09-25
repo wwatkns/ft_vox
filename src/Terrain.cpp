@@ -166,18 +166,21 @@ void    Terrain::setupChunkGenerationRenderingQuad( void ) {
 
 void    Terrain::setupChunkGenerationFbo( void ) {
     this->chunkGenerationFbo.width = this->chunkSize.x;
-    this->chunkGenerationFbo.height = this->chunkSize.y * this->chunkSize.z;
+    // this->chunkGenerationFbo.height = this->chunkSize.y * this->chunkSize.z;
+    this->chunkGenerationFbo.height = (this->chunkSize.y + 6) * this->chunkSize.z;
+    /* textures should have power-of-two side length */
+    std::cout << this->chunkGenerationFbo.width << std::endl;
+    std::cout << this->chunkGenerationFbo.height << std::endl;
+    // int extraSize = this->chunkSize.z * 6; // TMP (compute neighbour chunk faces for easy acces)
 
     glGenFramebuffers(1, &this->chunkGenerationFbo.fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, this->chunkGenerationFbo.fbo);
     /* create color texture */
     glGenTextures(1, &this->chunkGenerationFbo.id);
     glBindTexture(GL_TEXTURE_2D, this->chunkGenerationFbo.id);
-    // glPixelStorei(GL_UNPACK_ALIGNMENT, 8);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, this->chunkGenerationFbo.width, this->chunkGenerationFbo.height, 0, GL_RED, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, this->chunkGenerationFbo.id, 0);
     
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)

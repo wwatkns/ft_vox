@@ -10,24 +10,19 @@
 #include <string>
 #include <vector>
 #include <array>
+#include <algorithm>
 
 #include "Exception.hpp"
 #include "Shader.hpp"
 #include "Camera.hpp"
 #include "utils.hpp"
 
-typedef struct  sAo {
-    int xz;
-    int y;
-}               tAo;
 
 typedef struct  sPoint {
     glm::vec3   position;
     uint8_t     id;
     uint8_t     visibleFaces;
-    // glm::ivec2  ao;
-    int        ao_xz;
-    int        ao_y;
+    glm::ivec2  ao;
 }               tPoint;
 
 class Chunk {
@@ -54,6 +49,7 @@ private:
     glm::vec3           position;
     glm::ivec3          size;
     uint8_t*            texture;    /* the texture outputed by the chunk generation shader */
+    uint8_t*            textureExtras; /* the additional info in the texture outputed by the chunk generation shader */
     bool                meshed;
     bool                outOfRange;
 
@@ -61,7 +57,7 @@ private:
     void                createModelTransform( const glm::vec3& position );
     bool                isVoxelCulled( int x, int y, int z, int i, const std::array<const uint8_t*, 6>& adjacentChunks );
     uint8_t             getVisibleFaces( int x, int y, int z, int i, const std::array<const uint8_t*, 6>& adjacentChunks );
-    tAo                 getVerticesAoValue( int x, int y, int z, int i, const std::array<const uint8_t*, 6>& adjacentChunks, uint8_t visibleFaces );
+    glm::ivec2          getVerticesAoValue( int x, int y, int z, int i, const std::array<const uint8_t*, 6>& adjacentChunks, uint8_t visibleFaces );
 
 };
 

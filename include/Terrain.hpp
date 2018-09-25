@@ -48,7 +48,7 @@ struct  Key {
 };
 
 struct KeyHash {
-    /* /!\ positions are stored as 16 bits integers, so world position should not go further than 2^15 = 32768 chunks in any direction
+    /* /!\ positions are stored as 16 bits integers, so world position should not go further than 2^15 = 32768 chunks in any direction, or 1,048,576 blocks
     */
     uint64_t operator()(const Key &k) const {
         uint64_t    hash = 0;
@@ -84,6 +84,8 @@ private:
     GLuint                      noiseSampler;
     GLuint                      textureAtlas;
     uint8_t*                    dataBuffer;
+
+    uint                        extraHeight; // NEW
 
     void                        setupChunkGenerationRenderingQuad( void );
     void                        setupChunkGenerationFbo( void );
