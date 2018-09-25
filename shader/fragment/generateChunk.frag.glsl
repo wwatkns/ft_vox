@@ -139,9 +139,9 @@ void    main() {
 
     // vec3 worldPos = (chunk - 1.0 + pos) * chunkSize;
     vec3 worldPos = (chunkPosition + pos * chunkSize);
-    // FragColor.r = sqrt(map(worldPos)); // values from [0..255] (0..1) are in normalized fixed-point representation, a simple sqrt() fixes that.
+    FragColor.r = sqrt(map(worldPos)); // values from [0..255] (0..1) are in normalized fixed-point representation, a simple sqrt() fixes that.
 
-    FragColor.r = sqrt(int(sin(pos.x) * sin(pos.z) < pos.y && worldPos.y < 32.) * STONE);
+    // FragColor.r = sqrt(int(sin(worldPos.x/16.) * sin(worldPos.z/16.) * 0.5 + 0.5 > pos.y && worldPos.y < 32.) * STONE);
 }
 
 /* 2d height-map example */

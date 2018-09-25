@@ -20,27 +20,19 @@ uniform vec3 viewPos;
 /* 2 3
    0 1 */
 void    AddQuad(vec4 center, vec4 dy, vec4 dx, int ao) {
-    // Ao = ((ao & 0xC0) >> 6)/3; // 0
-    // Ao = ((ao & 0x30) >> 4)/3; // 1
-    // Ao = ((ao & 0x0C) >> 2)/3; // 2
-    // Ao = ((ao & 0x03) >> 0)/3; // 3
-
-    Ao = ((ao & 0x03) >> 0)/3; // 3
+    Ao = 1.0-((ao & 0xC0) >> 6)/3.; // 0
     TexCoords = vec2(0, 1);
     gl_Position = center + ( dx - dy);
     EmitVertex();
-
-    Ao = ((ao & 0x0C) >> 2)/3; // 2
+    Ao = 1.0-((ao & 0x30) >> 4)/3.; // 1
     TexCoords = vec2(1, 1);
     gl_Position = center + (-dx - dy);
     EmitVertex();
-
-    Ao = ((ao & 0xC0) >> 6)/3; // 0
+    Ao = 1.0-((ao & 0x0C) >> 2)/3.; // 2
     TexCoords = vec2(0, 0);
     gl_Position = center + ( dx + dy);
     EmitVertex();
-
-    Ao = ((ao & 0x30) >> 4)/3; // 1
+    Ao = 1.0-((ao & 0x03) >> 0)/3.; // 3
     TexCoords = vec2(1, 0);
     gl_Position = center + (-dx + dy);
     EmitVertex();
@@ -50,22 +42,19 @@ void    AddQuad(vec4 center, vec4 dy, vec4 dx, int ao) {
 /* 2 0
    3 1 */
 void    AddQuad2(vec4 center, vec4 dy, vec4 dx, int ao) {
-    Ao = ((ao & 0x30) >> 4) / 3; // 1
+    Ao = 1.0-((ao & 0x03) >> 0)/3.; // 3
     TexCoords = vec2(1, 0);
     gl_Position = center + ( dx - dy);
     EmitVertex();
-
-    Ao = ((ao & 0x0C) >> 2) / 3; // 2
+    Ao = 1.0-((ao & 0x30) >> 4)/3.; // 1
     TexCoords = vec2(1, 1);
     gl_Position = center + (-dx - dy);
     EmitVertex();
-
-    Ao = ((ao & 0xC0) >> 6) / 3; // 0
+    Ao = 1.0-((ao & 0x0C) >> 2)/3.; // 2
     TexCoords = vec2(0, 0);
     gl_Position = center + ( dx + dy);
     EmitVertex();
-
-    Ao = ((ao & 0x03) >> 0) / 3; // 3
+    Ao = 1.0-((ao & 0xC0) >> 6)/3.; // 0
     TexCoords = vec2(0, 1);
     gl_Position = center + (-dx + dy);
     EmitVertex();

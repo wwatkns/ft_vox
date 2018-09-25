@@ -85,7 +85,7 @@ tAo  Chunk::getVerticesAoValue( int x, int y, int z, int i, const std::array<con
 
     const int x_step = 1;
     const int y_step = size.x * size.z;
-    const int z_step = size.x;
+    const int z_step = -size.x;
 
     const int tnw = -x_step +  z_step + y_step;
     const int tn  =            z_step + y_step;
@@ -148,40 +148,40 @@ tAo  Chunk::getVerticesAoValue( int x, int y, int z, int i, const std::array<con
     +-----+-----+-----+    +-----+/-/-/+-----+    +-----+-----+-----+
     */
     if (visibleFaces & 0x20) {
-        ao.xz |= (p[10] + p[4]  + p[3] ) << 30; // right:0
-        ao.xz |= (p[3]  + p[2]  + p[9] ) << 28; // right:1
-        ao.xz |= (p[9]  + p[14] + p[15]) << 26; // right:2
-        ao.xz |= (p[15] + p[16] + p[10]) << 24; // right:3
+        ao.xz |= ( (p[10] + p[4]  + p[3] ) & 0x3) << 26; // right:0
+        ao.xz |= ( (p[3]  + p[2]  + p[9] ) & 0x3) << 24; // right:1
+        ao.xz |= ( (p[9]  + p[14] + p[15]) & 0x3) << 28; // right:2
+        ao.xz |= ( (p[15] + p[16] + p[10]) & 0x3) << 30; // right:3
     }
     if (visibleFaces & 0x10) {
-        ao.xz |= (p[8]  + p[0]  + p[7] ) << 22; // left:0
-        ao.xz |= (p[7]  + p[6]  + p[11]) << 20; // left:1
-        ao.xz |= (p[11] + p[18] + p[19]) << 18; // left:2
-        ao.xz |= (p[19] + p[12] + p[8] ) << 16; // left:3
+        ao.xz |= ( (p[8]  + p[0]  + p[7] ) & 0x3) << 16; // left:0
+        ao.xz |= ( (p[7]  + p[6]  + p[11]) & 0x3) << 18; // left:1
+        ao.xz |= ( (p[11] + p[18] + p[19]) & 0x3) << 22; // left:2
+        ao.xz |= ( (p[19] + p[12] + p[8] ) & 0x3) << 20; // left:3
     }
     if (visibleFaces & 0x08) {
-        ao.xz |= (p[11] + p[6]  + p[5] ) << 14; // front:0
-        ao.xz |= (p[5]  + p[4]  + p[10]) << 12; // front:1
-        ao.xz |= (p[10] + p[16] + p[17]) << 10; // front:2
-        ao.xz |= (p[17] + p[18] + p[11]) <<  8; // front:3
+        ao.xz |= ( (p[11] + p[6]  + p[5] ) & 0x3) <<  8; // front:0
+        ao.xz |= ( (p[5]  + p[4]  + p[10]) & 0x3) << 10; // front:1
+        ao.xz |= ( (p[10] + p[16] + p[17]) & 0x3) << 14; // front:2
+        ao.xz |= ( (p[17] + p[18] + p[11]) & 0x3) << 12; // front:3
     }
     if (visibleFaces & 0x04) {
-        ao.xz |= (p[9]  + p[2]  + p[1] ) <<  6; // back:0
-        ao.xz |= (p[1]  + p[0]  + p[8] ) <<  4; // back:1
-        ao.xz |= (p[8]  + p[12] + p[13]) <<  3; // back:2
-        ao.xz |= (p[13] + p[14] + p[9] ) <<  0; // back:3
+        ao.xz |= ( (p[9]  + p[2]  + p[1] ) & 0x3) <<  2; // back:0
+        ao.xz |= ( (p[1]  + p[0]  + p[8] ) & 0x3) <<  0; // back:1
+        ao.xz |= ( (p[8]  + p[12] + p[13]) & 0x3) <<  4; // back:2
+        ao.xz |= ( (p[13] + p[14] + p[9] ) & 0x3) <<  6; // back:3
     }
     if (visibleFaces & 0x02) {
-        ao.y  |= (p[7]  + p[0]  + p[1] ) << 14; // top:0
-        ao.y  |= (p[1]  + p[2]  + p[3] ) << 12; // top:1
-        ao.y  |= (p[3]  + p[4]  + p[5] ) << 10; // top:2
-        ao.y  |= (p[5]  + p[6]  + p[7] ) <<  8; // top:3
+        ao.y  |= ( (p[7]  + p[0]  + p[1] ) & 0x3) << 12; // top:0, 2
+        ao.y  |= ( (p[1]  + p[2]  + p[3] ) & 0x3) << 14; // top:1, 3
+        ao.y  |= ( (p[3]  + p[4]  + p[5] ) & 0x3) << 10; // top:2, 1
+        ao.y  |= ( (p[5]  + p[6]  + p[7] ) & 0x3) <<  8; // top:3, 0
     }
     if (visibleFaces & 0x01) {
-        ao.y  |= (p[19] + p[18] + p[17]) <<  6; // bottom:0
-        ao.y  |= (p[17] + p[16] + p[15]) <<  4; // bottom:1
-        ao.y  |= (p[15] + p[14] + p[13]) <<  2; // bottom:2
-        ao.y  |= (p[13] + p[12] + p[19]) <<  0; // bottom:3
+        ao.y  |= ( (p[19] + p[12] + p[13]) & 0x3) <<  4; // bottom:0
+        ao.y  |= ( (p[13] + p[14] + p[15]) & 0x3) <<  0; // bottom:1
+        ao.y  |= ( (p[15] + p[16] + p[17]) & 0x3) <<  2; // bottom:2
+        ao.y  |= ( (p[17] + p[18] + p[19]) & 0x3) <<  6; // bottom:3
     }
     return ao;
 }
@@ -195,7 +195,7 @@ void    Chunk::buildMesh( const std::array<const uint8_t*, 6>& adjacentChunks ) 
                 int i = x + z * this->size.x + y * this->size.x * this->size.z;
                 if (this->texture[i] != 0) { /* if voxel is not air */
                     if (!isVoxelCulled(x, y, z, i, adjacentChunks)) {
-                        uint8_t visibleFaces = 255;//getVisibleFaces(x, y, z, i, adjacentChunks);
+                        uint8_t visibleFaces = getVisibleFaces(x, y, z, i, adjacentChunks);
                         uint8_t b = (uint8_t)(this->texture[i] - 1);
                         /* change dirt to grass on top */
                         if (b == 0 && !(adjacentChunks[5] != nullptr && y == size.y - 1 ? (adjacentChunks[5][i - (size.y - 1) * size.x * size.z] != 0) : (adjacentChunks[5] == nullptr && y == size.y - 1 ? 0 : (texture[i + size.x * size.z] != 0))))
