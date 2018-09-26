@@ -65,10 +65,10 @@ public:
     Terrain( uint renderDistance = 160, uint maxHeight = 256, const glm::ivec3& chunkSize = glm::ivec3(32, 32, 32) );
     ~Terrain( void );
 
-    void                        updateChunks( const Camera& camera );
+    void                        updateChunks( const glm::vec3& cameraPosition );
     void                        renderChunks( Shader shader, Camera& camera );
 
-    void                        generateChunkTextures( const Camera& camera );
+    void                        generateChunkTextures( const glm::vec3& cameraPosition );
     void                        generateChunkMeshes( void );
     void                        deleteChunk( void );
     glm::vec3                   getChunkPosition( const glm::vec3& position );
@@ -84,8 +84,6 @@ private:
     GLuint                      noiseSampler;
     GLuint                      textureAtlas;
     uint8_t*                    dataBuffer;
-
-    uint                        extraHeight; // NEW
 
     void                        setupChunkGenerationRenderingQuad( void );
     void                        setupChunkGenerationFbo( void );

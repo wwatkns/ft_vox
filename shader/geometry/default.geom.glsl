@@ -103,12 +103,12 @@ void    main() {
 
     */
 
-    /* fixes visual issue */
+    /* fixes visual issue (partially, best is to pass faces to geometry shader and compute them on CPU, instead of point) */
     Normal = vec3( 1.0, 0.0, 0.0);
     if (dot(Normal, (FragPos + dx.xyz) - viewPos) < 0) {
         if ( (gVisibleFaces[0] & 0x20) != 0) { /* right */
             int ao = (gAo[0][0] & 0xFF000000) >> 24;
-            if ( pow((ao&0x03)>>0, 2) + pow((ao&0xC0)>>6, 2) < pow((ao&0x0C)>>2, 2) + pow((ao&0x30)>>4, 2) )
+            if ( pow((ao&0x30)>>4, 2) + pow((ao&0x0C)>>2, 2) > pow((ao&0xC0)>>6, 2) + pow((ao&0x03)>>0, 2) )
                 AddQuadFlipped(center + dx, dy, dz, ao, false);
             else
                 AddQuad(center + dx, dy, dz, ao, false);
@@ -128,7 +128,7 @@ void    main() {
     if (dot(Normal, (FragPos + dy.xyz) - viewPos) < 0) {
         if ( (gVisibleFaces[0] & 0x02) != 0) { /* top */
             int ao = (gAo[0][1] & 0x0000FF00) >> 8;
-            if ( pow((ao&0x30)>>4, 2) + pow((ao&0x0C)>>2, 2) > pow((ao&0x03)>>0, 2) + pow((ao&0xC0)>>6, 2) )
+            if ( pow((ao&0x30)>>4, 2) + pow((ao&0x0C)>>2, 2) > pow((ao&0xC0)>>6, 2) + pow((ao&0x03)>>0, 2) )
                 AddQuadFlipped(center + dy, dz, dx, ao, false);
             else
                 AddQuad(center + dy, dz, dx, ao, false);
@@ -148,7 +148,7 @@ void    main() {
     if (dot(Normal, (FragPos + dz.xyz) - viewPos) < 0) {
         if ( (gVisibleFaces[0] & 0x08) != 0) { /* front */
             int ao = (gAo[0][0] & 0x0000FF00) >> 8;
-            if ( pow((ao&0xC0)>>6, 2) + pow((ao&0x03)>>0, 2) < pow((ao&0x0C)>>2, 2) + pow((ao&0x30)>>4, 2) )
+            if ( pow((ao&0x30)>>4, 2) + pow((ao&0x0C)>>2, 2) > pow((ao&0xC0)>>6, 2) + pow((ao&0x03)>>0, 2) )
                 AddQuadFlipped(center + dz, dx, dy, ao, true);
             else
                 AddQuad(center + dz, dx, dy, ao, true);
@@ -158,7 +158,7 @@ void    main() {
         Normal = vec3( 0.0, 0.0,-1.0);
         if ( (gVisibleFaces[0] & 0x04) != 0) { /* back */
             int ao = (gAo[0][0] & 0x000000FF);
-            if ( pow((ao&0x0C)>>2, 2) + pow((ao&0x30)>>4, 2) > pow((ao&0x03)>>0, 2) + pow((ao&0xC0)>>6, 2) )
+            if ( pow((ao&0x30)>>4, 2) + pow((ao&0x0C)>>2, 2) > pow((ao&0xC0)>>6, 2) + pow((ao&0x03)>>0, 2) )
                 AddQuadFlipped(center - dz, dy, dx, ao, false);
             else
                 AddQuad(center - dz, dy, dx, ao, false);

@@ -138,46 +138,63 @@ float   map(vec3 p) {
 
 /* 3d volume texture */
 void    main() {
-    int extraHeight = 6; //! pass as uniform
-    float correction = (chunkSize.z + extraHeight) / chunkSize.z;
-    vec2 uv = vec2(TexCoords.x, (1.0 - TexCoords.y) * correction);
-    if (uv.y < 1.0) { /* normal chunk generation */
+    // int extraHeight = 6; //! pass as uniform
+    // float correction = (chunkSize.z + extraHeight) / chunkSize.z;
+    vec2 uv = vec2(TexCoords.x, (1.0 - TexCoords.y));// * correction);
+    vec3 worldPos;
+    // if (uv.y < 1.0) { /* normal chunk generation */
         vec2 c_uv = floor(uv * chunkSize.xy) / (chunkSize.xy - 1.);
         float z = mod(floor(uv.y * chunkSize.y * chunkSize.z), chunkSize.z) / (chunkSize.z - 1.);
         vec3 pos = vec3(c_uv, z);
-        vec3 worldPos = (chunkPosition + pos * chunkSize);
-        FragColor.r = sqrt(map(worldPos)); // values from [0..255] (0..1) are in normalized fixed-point representation, a simple sqrt() fixes that.
-    }
-    else { /* generate extra informations on faces around chunks */
-        float cstep = correction / extraHeight;
-        uv.y = (uv.y-1.0);
-        vec2 c_uv = floor(uv * chunkSize.xy) / (chunkSize.xy - 1.);
-        float z = mod(floor(uv.y * chunkSize.y * chunkSize.z), chunkSize.z) / (chunkSize.z - 1.);
-        vec3 pos = vec3(c_uv, z);
-        vec3 worldPos;
+        worldPos = (chunkPosition + pos * chunkSize);
 
-        // /* compute faces */
-        if (1.0 <= uv.y && uv.y < cstep * 1) { /* top */
-            worldPos = (chunkPosition + vec3(0, 1, 0) + pos * chunkSize);
-        }
-        else if (cstep * 1 <= uv.y && uv.y < cstep * 2) { /* bottom */
-            worldPos = (chunkPosition - vec3(0, 1, 0) + pos * chunkSize);
-        }
-        else if (cstep * 2 <= uv.y && uv.y < cstep * 3) { /* right */
-            worldPos = (chunkPosition + vec3(1, 0, 0) + pos * chunkSize);
-        }
-        else if (cstep * 3 <= uv.y && uv.y < cstep * 4) { /* left */
-            worldPos = (chunkPosition - vec3(1, 0, 0) + pos * chunkSize);
-        }
-        else if (cstep * 4 <= uv.y && uv.y < cstep * 5) { /* front */
-            worldPos = (chunkPosition + vec3(0, 0, 1) + pos * chunkSize);
-        }
-        else { /* back */
-            worldPos = (chunkPosition - vec3(0, 0, 1) + pos * chunkSize);
-        }
-        FragColor.r = sqrt(map(worldPos));
-        // FragColor.r = sqrt(SAND);
-    }
+    // }
+    // else { /* generate extra informations on faces around chunks */
+    //     vec3 pos;
+    //     /* split the uv.y upper part (above from 1 to 1.1875) in 6 parts */
+    //     float faceUvMax = 1.0 + floor((uv.y - 1.) * chunkSize.x + 1.) / chunkSize.x;
+    //     float uvy = 1.0 - (faceUvMax - uv.y) * chunkSize.y;
+    //     vec2 c_uv = floor(vec2(uv.x, uvy) * chunkSize.xy) / (chunkSize.xy - 1.);
+
+    //     int face = int((faceUvMax-1.0) * chunkSize.x) - 1;
+    //     // switch (face) {
+    //     //     case 0: pos = vec3(c_uv.x, 1.0, c_uv.y); break;
+    //     //     case 1: pos = vec3(c_uv.x, 0.0, c_uv.y); break;
+    //     //     case 2: pos = vec3(1.0, c_uv.yx); break;
+    //     //     case 3: pos = vec3(0.0, c_uv.yx); break;
+    //     //     case 4: pos = vec3(c_uv.xy, 1.0); break;
+    //     //     case 5: pos = vec3(c_uv.xy, 0.0); break;
+    //     // }
+    //     // if (face == 0) { /* top */
+    //     //     pos = vec3(c_uv.x, 1.0, c_uv.y);
+    //     // }
+    //     // else if (face == 1) { /* bottom */
+    //     //     pos = vec3(c_uv.x, 0.0, c_uv.y);
+    //     // }
+    //     // else if (face == 2) { /* right */
+    //     //     pos = vec3(1.0, c_uv.yx);
+    //     // }
+    //     // else if (face == 3) { /* left */
+    //     //     pos = vec3(0.0, c_uv.yx);
+    //     // }
+    //     // else if (face == 4) { /* front */
+    //     //     pos = vec3(c_uv.xy, 1.0);
+    //     // }
+    //     // else { /* back */
+    //     //     pos = vec3(c_uv.xy, 0.0);
+    //     // }
+    //     // worldPos = (chunkPosition + pos * chunkSize);
+
+    //     switch (face) {
+    //         case 0: worldPos = (chunkPosition + vec3(c_uv.x, 1.0, c_uv.y) * chunkSize) + vec3(0, 1, 0); break; // top
+    //         case 1: worldPos = (chunkPosition + vec3(c_uv.x, 0.0, c_uv.y) * chunkSize) - vec3(0, 1, 0); break; // bottom
+    //         case 2: worldPos = (chunkPosition + vec3(1.0, c_uv.yx) * chunkSize) + vec3(1, 0, 0); break; // right
+    //         case 3: worldPos = (chunkPosition + vec3(0.0, c_uv.yx) * chunkSize) - vec3(1, 0, 0); break; // left
+    //         case 4: worldPos = (chunkPosition + vec3(c_uv.xy, 1.0) * chunkSize) + vec3(0, 0, 1); break; // front
+    //         case 5: worldPos = (chunkPosition + vec3(c_uv.xy, 0.0) * chunkSize) - vec3(0, 0, 1); break; // back
+    //     }
+    // }
+    FragColor.r = sqrt(map(worldPos)); // values from [0..255] (0..1) are in normalized fixed-point representation, a simple sqrt() fixes that.
 
     // FragColor.r = sqrt(int(sin(worldPos.y/16.+0.5*PI)*sin(worldPos.x/16.+0.5*PI)*0.5+0.5 < worldPos.z/32.) * STONE); // Z
     // FragColor.r = sqrt(int(sin(worldPos.y/16.+0.5*PI)*sin(worldPos.z/16.+0.5*PI)*0.5+0.5 < worldPos.x/32.) * STONE); // X

@@ -14,6 +14,8 @@ Terrain::Terrain( uint renderDistance, uint maxHeight, const glm::ivec3& chunkSi
         "./resource/terrain-4.png"
     }});
     this->dataBuffer = static_cast<uint8_t*>(malloc(sizeof(uint8_t) * this->chunkGenerationFbo.width * this->chunkGenerationFbo.height));
+
+    // this->texturePadding = 4; // even though we only need 2, openGL does not like this number and gl_FragCoord values will be messed up with 2...
 }
 
 Terrain::~Terrain( void ) {
@@ -32,6 +34,7 @@ Terrain::~Terrain( void ) {
     this->dataBuffer = NULL;
 }
 
+/* return the chunk position (in chunk space, left chunk is {-1, 0, 0} ) */
 glm::vec3   Terrain::getChunkPosition( const glm::vec3& position ) {
     glm::vec3 chunkPosition;
     // ceil the y position to max height
@@ -41,7 +44,9 @@ glm::vec3   Terrain::getChunkPosition( const glm::vec3& position ) {
     return chunkPosition;
 }
 
-void    Terrain::generateChunkTextures( const Camera& camera ) {
+int extra_ = 4; // TMP
+
+void    Terrain::generateChunkTextures( const glm::vec3& cameraPosition ) {
     /*  naive algorithm : 
         * iterate on all the positions around player in render distance range and create chunk if it does not exist.
     */
@@ -51,7 +56,7 @@ void    Terrain::generateChunkTextures( const Camera& camera ) {
         for (int z = -dist.z; z < dist.z; ++z)
             for (int x = -dist.x; x < dist.x; ++x) {
                 /* if chunk was never generated */
-                Key key = { this->getChunkPosition(camera.getPosition()) * glm::vec3(1, 0, 1) + glm::vec3(x, y, z) };
+                Key key = { this->getChunkPosition(cameraPosition) * glm::vec3(1, 0, 1) + glm::vec3(x, y, z) };
                 if (this->chunks.find(key) == this->chunks.end()) {
                     /* if we maximum number of chunks stored is reached, delete one to make room */
                     // if (this->chunks.size() >= (renderDistance / this->chunkSize.x) * (renderDistance / this->chunkSize.z) * height) {
@@ -70,12 +75,13 @@ void    Terrain::generateChunkMeshes( void ) {
     for (std::pair<Key, Chunk*> chunk : this->chunks) {
         if (!chunk.second->isMeshed()) {
             const std::array<const uint8_t*, 6> adjacentChunks = {
-                ( chunks.find({chunk.first.p - glm::vec3(1, 0, 0)}) != chunks.end() ? chunks[{chunk.first.p - glm::vec3(1, 0, 0)}]->getTexture() : nullptr), // left
-                ( chunks.find({chunk.first.p + glm::vec3(1, 0, 0)}) != chunks.end() ? chunks[{chunk.first.p + glm::vec3(1, 0, 0)}]->getTexture() : nullptr), // right
-                ( chunks.find({chunk.first.p - glm::vec3(0, 0, 1)}) != chunks.end() ? chunks[{chunk.first.p - glm::vec3(0, 0, 1)}]->getTexture() : nullptr), // back
-                ( chunks.find({chunk.first.p + glm::vec3(0, 0, 1)}) != chunks.end() ? chunks[{chunk.first.p + glm::vec3(0, 0, 1)}]->getTexture() : nullptr), // front
-                ( chunks.find({chunk.first.p - glm::vec3(0, 1, 0)}) != chunks.end() ? chunks[{chunk.first.p - glm::vec3(0, 1, 0)}]->getTexture() : nullptr), // down
-                ( chunks.find({chunk.first.p + glm::vec3(0, 1, 0)}) != chunks.end() ? chunks[{chunk.first.p + glm::vec3(0, 1, 0)}]->getTexture() : nullptr)  // up
+                nullptr,nullptr,nullptr,nullptr,nullptr,nullptr
+                // ( chunks.find({chunk.first.p - glm::vec3(1, 0, 0)}) != chunks.end() ? chunks[{chunk.first.p - glm::vec3(1, 0, 0)}]->getTexture() : nullptr), // left
+                // ( chunks.find({chunk.first.p + glm::vec3(1, 0, 0)}) != chunks.end() ? chunks[{chunk.first.p + glm::vec3(1, 0, 0)}]->getTexture() : nullptr), // right
+                // ( chunks.find({chunk.first.p - glm::vec3(0, 0, 1)}) != chunks.end() ? chunks[{chunk.first.p - glm::vec3(0, 0, 1)}]->getTexture() : nullptr), // back
+                // ( chunks.find({chunk.first.p + glm::vec3(0, 0, 1)}) != chunks.end() ? chunks[{chunk.first.p + glm::vec3(0, 0, 1)}]->getTexture() : nullptr), // front
+                // ( chunks.find({chunk.first.p - glm::vec3(0, 1, 0)}) != chunks.end() ? chunks[{chunk.first.p - glm::vec3(0, 1, 0)}]->getTexture() : nullptr), // down
+                // ( chunks.find({chunk.first.p + glm::vec3(0, 1, 0)}) != chunks.end() ? chunks[{chunk.first.p + glm::vec3(0, 1, 0)}]->getTexture() : nullptr)  // up
             };
             chunk.second->buildMesh(adjacentChunks);
         }
@@ -96,7 +102,7 @@ void    Terrain::renderChunkGeneration( const glm::vec3& position, uint8_t* data
     this->chunkGenerationShader->setFloatUniformValue("near", 0.1f); // get near from camera
     this->chunkGenerationShader->setFloatUniformValue("uTime", glfwGetTime());
     this->chunkGenerationShader->setVec3UniformValue("chunkPosition", position);
-    this->chunkGenerationShader->setVec3UniformValue("chunkSize", glm::vec3(this->chunkSize) );
+    this->chunkGenerationShader->setVec3UniformValue("chunkSize", glm::vec3(this->chunkSize+extra_) );
     glActiveTexture(GL_TEXTURE0);
     this->chunkGenerationShader->setIntUniformValue("noiseSampler", 0);
     glBindTexture(GL_TEXTURE_2D, this->noiseSampler);
@@ -121,10 +127,10 @@ void    Terrain::renderChunks( Shader shader, Camera& camera ) {
     }
 }
 
-void    Terrain::updateChunks( const Camera& camera ) {
-    this->generateChunkTextures(camera);
+void    Terrain::updateChunks( const glm::vec3& cameraPosition ) {
+    this->generateChunkTextures(cameraPosition);
     this->generateChunkMeshes();
-}
+    }
 
 void    Terrain::setupChunkGenerationRenderingQuad( void ) {
     /* create quad */
@@ -165,13 +171,17 @@ void    Terrain::setupChunkGenerationRenderingQuad( void ) {
 }
 
 void    Terrain::setupChunkGenerationFbo( void ) {
-    this->chunkGenerationFbo.width = this->chunkSize.x;
+    // this->chunkGenerationFbo.width = this->chunkSize.x;
     // this->chunkGenerationFbo.height = this->chunkSize.y * this->chunkSize.z;
-    this->chunkGenerationFbo.height = (this->chunkSize.y + 6) * this->chunkSize.z;
+
+    this->chunkGenerationFbo.width = (this->chunkSize.x + extra_);
+    this->chunkGenerationFbo.height = (this->chunkSize.y + extra_) * (this->chunkSize.z + extra_);
+    
+    // this->chunkGenerationFbo.height = (this->chunkSize.y + 6) * this->chunkSize.z;
+
     /* textures should have power-of-two side length */
     std::cout << this->chunkGenerationFbo.width << std::endl;
     std::cout << this->chunkGenerationFbo.height << std::endl;
-    // int extraSize = this->chunkSize.z * 6; // TMP (compute neighbour chunk faces for easy acces)
 
     glGenFramebuffers(1, &this->chunkGenerationFbo.fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, this->chunkGenerationFbo.fbo);
@@ -181,6 +191,7 @@ void    Terrain::setupChunkGenerationFbo( void ) {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, this->chunkGenerationFbo.width, this->chunkGenerationFbo.height, 0, GL_RED, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, this->chunkGenerationFbo.id, 0);
     
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
