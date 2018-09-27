@@ -84,6 +84,7 @@ private:
     GLuint                      noiseSampler;
     GLuint                      textureAtlas;
     uint8_t*                    dataBuffer;
+    uint                        dataMargin;
 
     void                        setupChunkGenerationRenderingQuad( void );
     void                        setupChunkGenerationFbo( void );

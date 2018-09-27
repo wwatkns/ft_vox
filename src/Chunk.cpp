@@ -1,14 +1,12 @@
 #include "Chunk.hpp"
 #include "glm/ext.hpp"
 
-int extra = 4;
-
-Chunk::Chunk( const glm::vec3& position, const glm::ivec3& size, const uint8_t* texture ) : position(position), size(size), meshed(false), outOfRange(false) {
+Chunk::Chunk( const glm::vec3& position, const glm::ivec3& size, const uint8_t* texture, const uint margin ) : position(position), size(size), margin(margin), meshed(false), outOfRange(false) {
     this->createModelTransform(position);
     // this->texture = static_cast<uint8_t*>(malloc(sizeof(uint8_t) * size.x * size.y * size.z));
     // memcpy(this->texture, texture, size.x * size.y * size.z);
-    this->texture = static_cast<uint8_t*>(malloc(sizeof(uint8_t) * (size.x+extra) * (size.y+extra) * (size.z+extra)));
-    memcpy(this->texture, texture, (size.x+extra) * (size.y+extra) * (size.z+extra));
+    this->texture = static_cast<uint8_t*>(malloc(sizeof(uint8_t) * (size.x+margin) * (size.y+margin) * (size.z+margin)));
+    memcpy(this->texture, texture, (size.x+margin) * (size.y+margin) * (size.z+margin));
 
     /* read the extra information of the texture (6 faces neighbours of chunk) */
     // this->textureExtras = static_cast<uint8_t*>(malloc(sizeof(uint8_t) * size.x * 6 * size.z)); // pass the 6 constant as arg
@@ -22,36 +20,25 @@ Chunk::~Chunk( void ) {
     glDeleteBuffers(1, &this->vbo);
 }
 
-uint8_t Chunk::getVisibleFaces( int x, int y, int z, int i, const std::array<const uint8_t*, 6>& adjacentChunks ) {
+uint8_t Chunk::getVisibleFaces( int i ) {
     uint8_t faces = 0x0;
-    faces |=  (x + 1 < size.x && this->texture[i + 1              ] == 0) << 5; // right
-    faces |=  (x - 1 >= 0     && this->texture[i - 1              ] == 0) << 4; // left
-    faces |=  (z + 1 < size.z && this->texture[i + size.x         ] == 0) << 3; // front
-    faces |=  (z - 1 >= 0     && this->texture[i - size.x         ] == 0) << 2; // back
-    faces |= ((y + 1 < size.y && this->texture[i + size.x * size.z] == 0) || (y == size.y - 1 && adjacentChunks[5] == nullptr) ) << 1; // up
-    faces |= ((y - 1 >= 0     && this->texture[i - size.x * size.z] == 0) || (y == 0          && adjacentChunks[4] == nullptr) );      // down
+    faces |=  (this->texture[i + 1                                ] == 0) << 5; // right
+    faces |=  (this->texture[i - 1                                ] == 0) << 4; // left
+    faces |=  (this->texture[i + (size.x+margin)                  ] == 0) << 3; // front
+    faces |=  (this->texture[i - (size.x+margin)                  ] == 0) << 2; // back
+    faces |=  (this->texture[i + (size.x+margin) * (size.z+margin)] == 0) << 1; // up
+    faces |=  (this->texture[i - (size.x+margin) * (size.z+margin)] == 0) << 0; // down
     return faces;
 }
 
-// bool    Chunk::isVoxelCulled( int x, int y, int z, int i, const std::array<const uint8_t*, 6>& adjacentChunks ) {
-//     uint8_t b = 0x1;
-//     /* empty with borders on world extremities */
-//     b &= (adjacentChunks[0] != nullptr && x == 0          ? (adjacentChunks[0][i + (size.x - 1)                  ] != 0) : (adjacentChunks[0] == nullptr && x == 0          ? 0 : (texture[i - 1] != 0)));
-//     b &= (adjacentChunks[1] != nullptr && x == size.x - 1 ? (adjacentChunks[1][i - (size.x - 1)                  ] != 0) : (adjacentChunks[1] == nullptr && x == size.x - 1 ? 0 : (texture[i + 1] != 0)));
-//     b &= (adjacentChunks[2] != nullptr && z == 0          ? (adjacentChunks[2][i + (size.z - 1) * size.x         ] != 0) : (adjacentChunks[2] == nullptr && z == 0          ? 0 : (texture[i - size.x] != 0)));
-//     b &= (adjacentChunks[3] != nullptr && z == size.z - 1 ? (adjacentChunks[3][i - (size.z - 1) * size.x         ] != 0) : (adjacentChunks[3] == nullptr && z == size.z - 1 ? 0 : (texture[i + size.x] != 0)));
-//     b &= (adjacentChunks[4] != nullptr && y == 0          ? (adjacentChunks[4][i + (size.y - 1) * size.x * size.z] != 0) : (adjacentChunks[4] == nullptr && y == 0          ? 0 : (texture[i - size.x * size.z] != 0)));
-//     b &= (adjacentChunks[5] != nullptr && y == size.y - 1 ? (adjacentChunks[5][i - (size.y - 1) * size.x * size.z] != 0) : (adjacentChunks[5] == nullptr && y == size.y - 1 ? 0 : (texture[i + size.x * size.z] != 0)));
-// }
-
-bool    Chunk::isVoxelCulled( int x, int y, int z, int i, const std::array<const uint8_t*, 6>& adjacentChunks ) {
+bool    Chunk::isVoxelCulled( int i ) {
     uint8_t b = 0x1;
-    b &= (x == 0          ? 1 : texture[i - 1] != 0); // left
-    b &= (x == size.x - 1 ? 1 : texture[i + 1] != 0); // right
-    b &= (z == 0          ? 1 : texture[i - (size.x+extra)] != 0); // back
-    b &= (z == size.z - 1 ? 1 : texture[i + (size.x+extra)] != 0); // front
-    b &= (y == 0          ? 1 : texture[i - (size.x+extra) * (size.z+extra)] != 0); // bottom
-    b &= (y == size.y - 1 ? 1 : texture[i + (size.x+extra) * (size.z+extra)] != 0); // top
+    b &= (this->texture[i + 1                                ] != 0); // right
+    b &= (this->texture[i - 1                                ] != 0); // left
+    b &= (this->texture[i + (size.x+margin)                  ] != 0); // front
+    b &= (this->texture[i - (size.x+margin)                  ] != 0); // back
+    b &= (this->texture[i + (size.x+margin) * (size.z+margin)] != 0); // top
+    b &= (this->texture[i - (size.x+margin) * (size.z+margin)] != 0); // bottom
     return b;
 }
 
@@ -68,12 +55,12 @@ bool    Chunk::isVoxelCulled( int x, int y, int z, int i, const std::array<const
     so we have 16 configurations for ao per face (16 = 2^4 = 4bits), so we can use an int using 6 * 4bits
 */
 
-glm::ivec2  Chunk::getVerticesAoValue( int x, int y, int z, int i, const std::array<const uint8_t*, 6>& adjacentChunks, uint8_t visibleFaces ) {
+glm::ivec2  Chunk::getVerticesAoValue( int i, uint8_t visibleFaces ) {
     glm::ivec2  ao = glm::ivec2(0, 0);
 
     const int x_step = 1;
-    const int y_step = (size.x+extra) * (size.z+extra);
-    const int z_step = (size.x+extra);
+    const int y_step = (size.x+margin) * (size.z+margin);
+    const int z_step = (size.x+margin);
     /* offsets in texture */
     const int tnw = -x_step + -z_step + y_step;
     const int tn  =           -z_step + y_step;
@@ -99,51 +86,30 @@ glm::ivec2  Chunk::getVerticesAoValue( int x, int y, int z, int i, const std::ar
     const int bw  = -x_step +           -y_step;
     
     /* we have to test 20 voxels */
-    int max = (size.x+extra) * (size.y+extra) * (size.z+extra);
     int p[20];
-    // const int e_tnw = adjacent_top_face;
-    // const int e_tn  = adjacent_top_face;
-    // const int e_tne = adjacent_top_face;
-    // const int e_te  = adjacent_top_face;
-    // const int e_tse = adjacent_top_face;
-    // const int e_ts  = adjacent_top_face;
-    // const int e_tsw = adjacent_top_face;
-    // const int e_tw  = adjacent_top_face;
-    // if (x == 0)
-    //     b = (uint8_t)(this->textureExtras[z + y * size.z + 3 * size.x * size.z] - 1); // left
-    // else if (x == size.x - 1)
-    //     b = (uint8_t)(this->textureExtras[z + y * size.z + 2 * size.x * size.z] - 1); // right
-    // else if (y == 0)
-    //     b = (uint8_t)(this->textureExtras[x + z * size.z + 1 * size.x * size.z] - 1); // bottom
-    // else if (y == size.y - 1)
-    //     b = (uint8_t)(this->textureExtras[x + z * size.z + 0 * size.x * size.z] - 1); // top
-    // else if (z == 0)
-    //     b = (uint8_t)(this->textureExtras[x + y * size.z + 5 * size.x * size.z] - 1); // back
-    // else if (z == size.z - 1)
-    //     b = (uint8_t)(this->textureExtras[x + y * size.z + 4 * size.x * size.z] - 1); // front
     /* 8 top */
-    p[0]  = (int)(i + tnw >= 0 && i + tnw < max && texture[i + tnw] != 0); // top:0
-    p[1]  = (int)(i + tn  >= 0 && i + tn  < max && texture[i + tn ] != 0); // top:1
-    p[2]  = (int)(i + tne >= 0 && i + tne < max && texture[i + tne] != 0); // top:2
-    p[3]  = (int)(i + te  >= 0 && i + te  < max && texture[i + te ] != 0); // top:3
-    p[4]  = (int)(i + tse >= 0 && i + tse < max && texture[i + tse] != 0); // top:4
-    p[5]  = (int)(i + ts  >= 0 && i + ts  < max && texture[i + ts ] != 0); // top:5
-    p[6]  = (int)(i + tsw >= 0 && i + tsw < max && texture[i + tsw] != 0); // top:6
-    p[7]  = (int)(i + tw  >= 0 && i + tw  < max && texture[i + tw ] != 0); // top:7
+    p[0]  = (int)(texture[i + tnw] != 0); // top:0
+    p[1]  = (int)(texture[i + tn ] != 0); // top:1
+    p[2]  = (int)(texture[i + tne] != 0); // top:2
+    p[3]  = (int)(texture[i + te ] != 0); // top:3
+    p[4]  = (int)(texture[i + tse] != 0); // top:4
+    p[5]  = (int)(texture[i + ts ] != 0); // top:5
+    p[6]  = (int)(texture[i + tsw] != 0); // top:6
+    p[7]  = (int)(texture[i + tw ] != 0); // top:7
     /* 4 middle */
-    p[8]  = (int)(i + mnw >= 0 && i + mnw < max && texture[i + mnw] != 0); // middle:0
-    p[9]  = (int)(i + mne >= 0 && i + mne < max && texture[i + mne] != 0); // middle:1
-    p[10] = (int)(i + mse >= 0 && i + mse < max && texture[i + mse] != 0); // middle:2
-    p[11] = (int)(i + msw >= 0 && i + msw < max && texture[i + msw] != 0); // middle:3
+    p[8]  = (int)(texture[i + mnw] != 0); // middle:0
+    p[9]  = (int)(texture[i + mne] != 0); // middle:1
+    p[10] = (int)(texture[i + mse] != 0); // middle:2
+    p[11] = (int)(texture[i + msw] != 0); // middle:3
     /* 8 bottom */
-    p[12] = (int)(i + bnw >= 0 && i + bnw < max && texture[i + bnw] != 0); // bottom:0
-    p[13] = (int)(i + bn  >= 0 && i + bn  < max && texture[i + bn ] != 0); // bottom:1
-    p[14] = (int)(i + bne >= 0 && i + bne < max && texture[i + bne] != 0); // bottom:2
-    p[15] = (int)(i + be  >= 0 && i + be  < max && texture[i + be ] != 0); // bottom:3
-    p[16] = (int)(i + bse >= 0 && i + bse < max && texture[i + bse] != 0); // bottom:4
-    p[17] = (int)(i + bs  >= 0 && i + bs  < max && texture[i + bs ] != 0); // bottom:5
-    p[18] = (int)(i + bsw >= 0 && i + bsw < max && texture[i + bsw] != 0); // bottom:6
-    p[19] = (int)(i + bw  >= 0 && i + bw  < max && texture[i + bw]  != 0); // bottom:7
+    p[12] = (int)(texture[i + bnw] != 0); // bottom:0
+    p[13] = (int)(texture[i + bn ] != 0); // bottom:1
+    p[14] = (int)(texture[i + bne] != 0); // bottom:2
+    p[15] = (int)(texture[i + be ] != 0); // bottom:3
+    p[16] = (int)(texture[i + bse] != 0); // bottom:4
+    p[17] = (int)(texture[i + bs ] != 0); // bottom:5
+    p[18] = (int)(texture[i + bsw] != 0); // bottom:6
+    p[19] = (int)(texture[i + bw]  != 0); // bottom:7
     /*      top                  middle                 bottom
     +-----+-----+-----+    +-----+/-/-/+-----+    +-----+-----+-----+
     |  0  |  1  |  2  |    |  0  |/////|  1  |    |  0  |  1  |  2  |
@@ -192,23 +158,21 @@ glm::ivec2  Chunk::getVerticesAoValue( int x, int y, int z, int i, const std::ar
     return ao;
 }
 
-void    Chunk::buildMesh( const std::array<const uint8_t*, 6>& adjacentChunks ) {
+void    Chunk::buildMesh( void ) {
     this->meshed = true;
     this->voxels.reserve(this->size.x * this->size.y * this->size.z);
     for (int y = 0; y < this->size.y; ++y)
         for (int z = 0; z < this->size.z; ++z)
             for (int x = 0; x < this->size.x; ++x) {
-                // int i = x + z * this->size.x + y * this->size.x * this->size.z;
-                int i = (x+extra/2) + (z+extra/2) * (this->size.x+extra) + (y+extra/2) * (this->size.x+extra) * (this->size.z+extra);
+                int i = (x+margin/2) + (z+margin/2) * (this->size.x+margin) + (y+margin/2) * (this->size.x+margin) * (this->size.z+margin);
                 if (this->texture[i] != 0) { /* if voxel is not air */
-                    if (!isVoxelCulled(x, y, z, i, adjacentChunks)) {
-                        uint8_t visibleFaces = 255;//getVisibleFaces(x, y, z, i, adjacentChunks);
+                    if (!isVoxelCulled(i)) {
+                        uint8_t visibleFaces = getVisibleFaces(i);
                         uint8_t b = (uint8_t)(this->texture[i] - 1);
-
                         /* change dirt to grass on top */
-                        if (b == 0 && !(adjacentChunks[5] != nullptr && y == size.y - 1 ? (adjacentChunks[5][i - (size.y - 1) * size.x * size.z] != 0) : (adjacentChunks[5] == nullptr && y == size.y - 1 ? 0 : (texture[i + size.x * size.z] != 0))))
+                        if (texture[i + (size.x+margin) * (size.z+margin)] == 0)
                             b = 1;
-                        glm::ivec2 ao = getVerticesAoValue(x, y, z, i, adjacentChunks, visibleFaces);
+                        glm::ivec2 ao = getVerticesAoValue(i, visibleFaces);
                         this->voxels.push_back( (tPoint){ glm::vec3(x, y, z), b, visibleFaces, ao } );
                     }
                 }

@@ -28,10 +28,10 @@ typedef struct  sPoint {
 class Chunk {
 
 public:
-    Chunk( const glm::vec3& position, const glm::ivec3& size, const uint8_t* texture );
+    Chunk( const glm::vec3& position, const glm::ivec3& size, const uint8_t* texture, const uint margin );
     ~Chunk( void );
 
-    void                buildMesh( const std::array<const uint8_t*, 6>& adjacentChunks );
+    void                buildMesh( void );
     void                render( Shader shader, Camera& camera, GLuint textureAtlas, uint renderDistance );
     /* getters */
     const GLuint&       getVao( void ) const { return vao; };
@@ -50,14 +50,15 @@ private:
     glm::ivec3          size;
     uint8_t*            texture;    /* the texture outputed by the chunk generation shader */
     uint8_t*            textureExtras; /* the additional info in the texture outputed by the chunk generation shader */
+    uint                margin; /* the texture margin */
     bool                meshed;
     bool                outOfRange;
 
     void                setup( int mode );
     void                createModelTransform( const glm::vec3& position );
-    bool                isVoxelCulled( int x, int y, int z, int i, const std::array<const uint8_t*, 6>& adjacentChunks );
-    uint8_t             getVisibleFaces( int x, int y, int z, int i, const std::array<const uint8_t*, 6>& adjacentChunks );
-    glm::ivec2          getVerticesAoValue( int x, int y, int z, int i, const std::array<const uint8_t*, 6>& adjacentChunks, uint8_t visibleFaces );
+    bool                isVoxelCulled( int i );
+    uint8_t             getVisibleFaces( int i );
+    glm::ivec2          getVerticesAoValue( int i, uint8_t visibleFaces );
 
 };
 
