@@ -5,6 +5,7 @@ Renderer::Renderer( Env* env ) :
 env(env),
 camera(80, (float)env->getWindow().width / (float)env->getWindow().height, 0.1f, 300.0f) {
     this->shader["default"] = new Shader("./shader/vertex/default.vert.glsl", "./shader/geometry/default.geom.glsl", "./shader/fragment/default.frag.glsl");
+    // this->shader["default"] = new Shader("./shader/vertex/defaultQuad.vert.glsl", "./shader/geometry/defaultQuad.geom.glsl", "./shader/fragment/default.frag.glsl");
     this->shader["skybox"]  = new Shader("./shader/vertex/skybox.vert.glsl", "./shader/fragment/skybox.frag.glsl");
     this->shader["fxaa"]  = new Shader("./shader/vertex/screenQuad.vert.glsl", "./shader/fragment/FXAA.frag.glsl");
     this->lastTime = std::chrono::steady_clock::now();
@@ -26,8 +27,8 @@ void	Renderer::loop( void ) {
     glEnable(GL_DEPTH_TEST); /* z-buffering */
     glEnable(GL_FRAMEBUFFER_SRGB); /* gamma correction */
     glEnable(GL_BLEND); /* transparency */
-    // glEnable(GL_CULL_FACE); /* face culling (back faces are not rendered) */
-    // glCullFace(GL_BACK);
+    glEnable(GL_CULL_FACE); /* face culling (back faces are not rendered) */
+    glCullFace(GL_BACK);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     while (!glfwWindowShouldClose(this->env->getWindow().ptr)) {
         glfwPollEvents();
@@ -91,11 +92,11 @@ void    Renderer::renderMeshes( void ) {
 
     this->env->getTerrain()->renderChunks(*this->shader["default"], this->camera);
 
-    static bool check = false;
-    if (!check) {
+    // static bool check = false;
+    // if (!check) {
         this->env->getTerrain()->updateChunks(this->camera.getPosition());
-        check = true;
-    }
+        // check = true;
+    // }
     
     /* copy the depth buffer to a texture (used in raymarch shader for geometry occlusion of raymarched objects) */
     // glBindTexture(GL_TEXTURE_2D, this->depthMap.id);

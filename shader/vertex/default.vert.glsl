@@ -1,8 +1,8 @@
 #version 400 core
 layout (location = 0) in vec3 aPos;
-layout (location = 1) in int aId;
-layout (location = 2) in int aVisibleFaces;
-layout (location = 3) in ivec2 aAo;
+layout (location = 1) in ivec2 aAo;
+layout (location = 2) in int aId;
+layout (location = 3) in int aVisibleFaces;
 
 out mat4 mvp;
 out vec3 gFragPos;

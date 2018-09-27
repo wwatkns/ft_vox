@@ -20,9 +20,9 @@
 
 typedef struct  sPoint {
     glm::vec3   position;
+    glm::ivec2  ao;
     uint8_t     id;
     uint8_t     visibleFaces;
-    glm::ivec2  ao;
 }               tPoint;
 
 class Chunk {

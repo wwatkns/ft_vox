@@ -16,8 +16,8 @@ flat out int Id;
 
 uniform vec3 viewPos;
 
+// const float[4] aoCurve = float[4]( 1.0, 0.55, 0.3, .1 ); // BEST
 // const float[4] aoCurve = float[4]( 1.0, 0.7, 0.6, 0.15 ); // best soft
-// const float[4] aoCurve = float[4]( 1.0, 0.65, 0.6, .15 ); // best hard
 // const float[4] aoCurve = float[4]( 1.0, 0.66, 0.33, 0. ); // linear
 const float[4] aoCurve = float[4]( 1.0, 0.4, 0.2, 0. ); // accentuated debug
 /* 3 +---+ 2
@@ -78,37 +78,30 @@ void    main() {
 
     // Normal = vec3( 1.0, 0.0, 0.0);
     // if ( (gVisibleFaces[0] & 0x20) != 0 && dot(Normal, (FragPos + dx.xyz) - viewPos) < 0) /* right */
-    //     AddQuad(center + dx, dy, dz);
+    //     AddQuad(center + dx, dy, dz, (gAo[0][0] & 0xFF000000) >> 24, false);
     // Normal = vec3(-1.0, 0.0, 0.0);
     // if ( (gVisibleFaces[0] & 0x10) != 0 && dot(Normal, (FragPos - dx.xyz) - viewPos) < 0) /* left */
-    //     AddQuad2(center - dx, dz, dy);
+    //     AddQuad(center - dx, dz, dy, (gAo[0][0] & 0x00FF0000) >> 16, true);
     // Normal = vec3( 0.0, 1.0, 0.0);
     // if ( (gVisibleFaces[0] & 0x02) != 0 && dot(Normal, (FragPos + dy.xyz) - viewPos) < 0) /* top */
-    //     AddQuad(center + dy, dz, dx);
+    //     AddQuad(center + dy, dz, dx, (gAo[0][1] & 0x0000FF00) >> 8, false);
     // Normal = vec3( 0.0,-1.0, 0.0);
     // if ( (gVisibleFaces[0] & 0x01) != 0 && dot(Normal, (FragPos - dy.xyz) - viewPos) < 0) /* bottom */
-    //     AddQuad(center - dy, dx, dz);
+    //     AddQuad(center - dy, dx, dz, (gAo[0][1] & 0x000000FF), false);
     // Normal = vec3( 0.0, 0.0, 1.0);
     // if ( (gVisibleFaces[0] & 0x08) != 0 && dot(Normal, (FragPos + dz.xyz) - viewPos) < 0) /* front */
-    //     AddQuad2(center + dz, dx, dy);
+    //     AddQuad(center + dz, dx, dy, (gAo[0][0] & 0x0000FF00) >> 8, true);
     // Normal = vec3( 0.0, 0.0,-1.0);
     // if ( (gVisibleFaces[0] & 0x04) != 0 && dot(Normal, (FragPos - dz.xyz) - viewPos) < 0) /* back */
-    //     AddQuad(center - dz, dy, dx);
+    //     AddQuad(center - dz, dy, dx, (gAo[0][0] & 0x000000FF), false);
 
-    /* (a00 + a11 > a01 + a10) -> Flip quad
-
-       a00 +----+ a10
-           |    |
-       a01 +----+ a11
-
-    */
-
+    int flippedQuads = (gAo[0][1] & 0x00FF0000) >> 16;
     /* fixes visual issue (partially, best is to pass faces to geometry shader and compute them on CPU, instead of point) */
     Normal = vec3( 1.0, 0.0, 0.0);
     if (dot(Normal, (FragPos + dx.xyz) - viewPos) < 0) {
         if ( (gVisibleFaces[0] & 0x20) != 0) { /* right */
             int ao = (gAo[0][0] & 0xFF000000) >> 24;
-            if ( pow((ao&0x30)>>4, 2) + pow((ao&0x0C)>>2, 2) > pow((ao&0xC0)>>6, 2) + pow((ao&0x03)>>0, 2) )
+            if ( (flippedQuads & 0x20) != 0 ) // can compute on CPU
                 AddQuadFlipped(center + dx, dy, dz, ao, false);
             else
                 AddQuad(center + dx, dy, dz, ao, false);
@@ -118,7 +111,7 @@ void    main() {
         Normal = vec3(-1.0, 0.0, 0.0);
         if ( (gVisibleFaces[0] & 0x10) != 0) { /* left */
             int ao = (gAo[0][0] & 0x00FF0000) >> 16;
-            if ( pow((ao&0x30)>>4, 2) + pow((ao&0x0C)>>2, 2) > pow((ao&0xC0)>>6, 2) + pow((ao&0x03)>>0, 2) )
+            if ( (flippedQuads & 0x10) != 0 )
                 AddQuadFlipped(center - dx, dz, dy, ao, true);
             else
                 AddQuad(center - dx, dz, dy, ao, true);
@@ -128,7 +121,7 @@ void    main() {
     if (dot(Normal, (FragPos + dy.xyz) - viewPos) < 0) {
         if ( (gVisibleFaces[0] & 0x02) != 0) { /* top */
             int ao = (gAo[0][1] & 0x0000FF00) >> 8;
-            if ( pow((ao&0x30)>>4, 2) + pow((ao&0x0C)>>2, 2) > pow((ao&0xC0)>>6, 2) + pow((ao&0x03)>>0, 2) )
+            if ( (flippedQuads & 0x02) != 0 )
                 AddQuadFlipped(center + dy, dz, dx, ao, false);
             else
                 AddQuad(center + dy, dz, dx, ao, false);
@@ -138,7 +131,7 @@ void    main() {
         Normal = vec3( 0.0,-1.0, 0.0);
         if ( (gVisibleFaces[0] & 0x01) != 0) { /* bottom */
             int ao = (gAo[0][1] & 0x000000FF);
-            if ( pow((ao&0x30)>>4, 2) + pow((ao&0x0C)>>2, 2) > pow((ao&0xC0)>>6, 2) + pow((ao&0x03)>>0, 2) )
+            if ( (flippedQuads & 0x01) != 0 )
                 AddQuadFlipped(center - dy, dx, dz, ao, false);
             else
                 AddQuad(center - dy, dx, dz, ao, false);
@@ -148,7 +141,7 @@ void    main() {
     if (dot(Normal, (FragPos + dz.xyz) - viewPos) < 0) {
         if ( (gVisibleFaces[0] & 0x08) != 0) { /* front */
             int ao = (gAo[0][0] & 0x0000FF00) >> 8;
-            if ( pow((ao&0x30)>>4, 2) + pow((ao&0x0C)>>2, 2) > pow((ao&0xC0)>>6, 2) + pow((ao&0x03)>>0, 2) )
+            if ( (flippedQuads & 0x08) != 0 )
                 AddQuadFlipped(center + dz, dx, dy, ao, true);
             else
                 AddQuad(center + dz, dx, dy, ao, true);
@@ -158,7 +151,7 @@ void    main() {
         Normal = vec3( 0.0, 0.0,-1.0);
         if ( (gVisibleFaces[0] & 0x04) != 0) { /* back */
             int ao = (gAo[0][0] & 0x000000FF);
-            if ( pow((ao&0x30)>>4, 2) + pow((ao&0x0C)>>2, 2) > pow((ao&0xC0)>>6, 2) + pow((ao&0x03)>>0, 2) )
+            if ( (flippedQuads & 0x04) != 0 )
                 AddQuadFlipped(center - dz, dy, dx, ao, false);
             else
                 AddQuad(center - dz, dy, dx, ao, false);

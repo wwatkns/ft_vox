@@ -84,8 +84,6 @@ float   fbm3d(in vec3 st, in float amplitude, in float frequency, in int octaves
 #define SAND 12/255.
 
 float   map(vec3 p) {
-    // p.y -= 2; // TMP, use uniform for padding
-    // p.xz += 2; // TMP, use uniform for padding
     /* TODO : implement biomes with voronoi cells */
     float res;
     /* bedrock level */

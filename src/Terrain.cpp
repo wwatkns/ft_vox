@@ -2,7 +2,7 @@
 #include "glm/ext.hpp"
 
 Terrain::Terrain( uint renderDistance, uint maxHeight, const glm::ivec3& chunkSize ) : renderDistance(renderDistance), maxHeight(maxHeight), chunkSize(chunkSize) {
-    this->dataMargin = 4; // even though we only need 2, openGL does not like this number and gl_FragCoord values will be messed up with 2...
+    this->dataMargin = 4; // even though we only need a margin of 2, openGL does not like this number and gl_FragCoord values will be messed up...
     this->setupChunkGenerationRenderingQuad();
     this->setupChunkGenerationFbo();
     this->chunkGenerationShader = new Shader("./shader/vertex/screenQuad.vert.glsl", "./shader/fragment/generateChunk.frag.glsl");
@@ -49,13 +49,13 @@ void    Terrain::generateChunkTextures( const glm::vec3& cameraPosition ) {
     */
     int height = this->maxHeight / this->chunkSize.y;
     glm::ivec3 dist = glm::ivec3(this->renderDistance) / this->chunkSize;
-    for (int y = 0; y < height; ++y) /* we build a column of chunks each time */
+    for (int y = height; y >= 0; y--) /* we build a column of chunks each time */
         for (int z = -dist.z; z < dist.z; ++z)
             for (int x = -dist.x; x < dist.x; ++x) {
                 /* if chunk was never generated */
                 Key key = { this->getChunkPosition(cameraPosition) * glm::vec3(1, 0, 1) + glm::vec3(x, y, z) };
                 if (this->chunks.find(key) == this->chunks.end()) {
-                    /* if we maximum number of chunks stored is reached, delete one to make room */
+                    /* if maximum number of chunks stored is reached, delete one to make room */
                     // if (this->chunks.size() >= (renderDistance / this->chunkSize.x) * (renderDistance / this->chunkSize.z) * height) {
                     //     // std::cout << "deleting chunk" << std::endl;
                     //     // this->chunks.erase( {  } );
@@ -160,17 +160,8 @@ void    Terrain::setupChunkGenerationRenderingQuad( void ) {
 }
 
 void    Terrain::setupChunkGenerationFbo( void ) {
-    // this->chunkGenerationFbo.width = this->chunkSize.x;
-    // this->chunkGenerationFbo.height = this->chunkSize.y * this->chunkSize.z;
-
     this->chunkGenerationFbo.width = (this->chunkSize.x + this->dataMargin);
     this->chunkGenerationFbo.height = (this->chunkSize.y + this->dataMargin) * (this->chunkSize.z + this->dataMargin);
-    
-    // this->chunkGenerationFbo.height = (this->chunkSize.y + 6) * this->chunkSize.z;
-
-    /* textures should have power-of-two side length */
-    std::cout << this->chunkGenerationFbo.width << std::endl;
-    std::cout << this->chunkGenerationFbo.height << std::endl;
 
     glGenFramebuffers(1, &this->chunkGenerationFbo.fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, this->chunkGenerationFbo.fbo);
