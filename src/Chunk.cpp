@@ -141,7 +141,7 @@ void    Chunk::buildMesh( void ) {
                     uint8_t visibleFaces = getVisibleFaces(i);
                     uint8_t b = static_cast<uint8_t>(this->texture[i] - 1);
                     /* change dirt to grass on top */
-                    if (texture[i + this->y_step] == 0)
+                    if (texture[i] == 1 && texture[i + this->y_step] == 0)
                         b = 1;
                     glm::ivec2 ao = getVerticesAoValue(i, visibleFaces);
                     this->voxels.push_back( (tPoint){ glm::vec3(x, y, z), ao, b, visibleFaces } );

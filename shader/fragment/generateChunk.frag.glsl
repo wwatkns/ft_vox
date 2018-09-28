@@ -60,7 +60,7 @@ float   fbm3d(in vec3 st, in float amplitude, in float frequency, in int octaves
 //         for (int x= -1; x <= 1; x++) {
 //             vec2 neighbor = vec2(float(x),float(y));     // Neighbor place in the grid
 //             vec2 point = random2(i_st + neighbor);       // Random position from current + neighbor place in the grid
-//             point = 0.5 + 0.5*sin(uTime + 6.2831*point); // Animate the point
+//             point = 0.5 + 0.5*sin(6.2831*point); // Animate the point
 //             vec2 diff = neighbor + point - f_st;         // Vector between the pixel and the point
 //             float dist = length(diff);                   // Distance to the point
 //             m_dist = min(m_dist, dist);                  // Keep the closer distance
@@ -91,23 +91,30 @@ float   map(vec3 p) {
     /* terrain and caves */
     int g0 = int(fbm3d(p, 0.5, 0.01, 6, 1.7, 0.5) > p.y / 255.);           /*  low-frequency landscape */
     int g1 = int(fbm3d(p, 0.5, 0.025, 4, 1.5, 0.5) > 0.45 * (p.y / 128.)); /* high-frequency landscape */
-    int g2 = int(fbm3d(p, 2.5, 0.15, 3, 1.0, 0.01) > 0.6);                 /* cave system, low-freq */
-    int g13 = int(fbm3d(p * vec3(1,1.4,1), 3., 0.08, 5, 5.0, 0.05) > 0.6); /* cave system, high-freq */
+    // int g2 = int( (1-abs( fbm3d(vec3(p.x-5,  p.y, p.z + 21.), 0.5, 0.03, 5, 1.9, 0.48) * 2.-1.)) * 
+                //   (1-abs( fbm3d(vec3(p.z, p.y+4., p.x - 42.), 0.5, 0.03, 5, 1.9, 0.48) * 2.-1.)) < 0.9);
+    // int g2 = int( (1-abs( fbm3d(vec3(p.x-5,  p.y, p.z + 21.), 0.48, 0.033, 6, 1.7, 0.48) * 2.-1.)) * 
+                //   (1-abs( fbm3d(vec3(p.z, p.y+4., p.x - 42.), 0.48, 0.030, 6, 0.7, 0.49) * 2.-1.)) < 0.92);
+    // int g2 = int( (1-abs( fbm3d(vec3(p.x*0.5-5, p.y, p.z + 21.), 0.48, 0.037, 6, 1.3, 0.45) * 2.-1.)) * 
+                //   (1-abs( fbm3d(vec3(p.z*0.5, p.y+4., p.x - 42.), 0.48, 0.035, 6, 0.7, 0.45) * 2.-1.)) < 0.92);
+    int g2 = int( (1-abs( fbm3d(vec3(p.x*0.5-5,  p.y, p.z + 21.), 0.44, 0.067, 6, 1.3, 0.49) * 2.-1.)) * 
+                  (1-abs( fbm3d(vec3(p.z*0.5, p.y+4., p.x - 42.), 0.44, 0.065, 6, 0.7, 0.49) * 2.-1.)) < 0.91);
+    int g13 = int(fbm3d(p, 0.44, 0.04, 6, 2.0, 0.3) < 0.5);
     /* resource distribution */
-    int g3 = int(fbm3d(p+340., 0.29, 0.20, 3, 1.5, 0.37) < 0.1 && p.y < 130);/* coal */
-    int g4 = int(fbm3d(p-100., 0.37, 0.30, 3, 1.8, 0.30) < 0.1 && p.y < 64); /* iron */
-    int g10= int(fbm3d(p+100., 0.37, 0.35, 3, 1.2, 0.33) < 0.1 && p.y < 32); /* gold */
-    int g11= int(fbm3d(p-230., 0.35, 0.30, 3, 1.2, 0.33) < 0.1 && p.y < 32); /* lapis */
-    int g12= int(fbm3d(p-160., 0.30, 0.35, 3, 1.2, 0.33) < 0.1 && p.y < 16); /* redstone */
-    int g5 = int(fbm3d(p+100., 0.40, 0.20, 3, 1.5, 0.38) < 0.1 && p.y < 16); /* diamond */
+    int g3 = int(fbm3d(p+340., 0.35, 0.20, 3, 1.5, 0.37) < 0.1 && p.y < 130);/* coal */
+    int g4 = int(fbm3d(p-100., 0.45, 0.30, 3, 1.8, 0.30) < 0.1 && p.y < 64); /* iron */
+    int g10= int(fbm3d(p+100., 0.45, 0.35, 3, 1.2, 0.33) < 0.1 && p.y < 32); /* gold */
+    int g11= int(fbm3d(p-230., 0.55, 0.30, 3, 1.2, 0.33) < 0.1 && p.y < 32); /* lapis */
+    int g12= int(fbm3d(p-160., 0.45, 0.35, 3, 0.2, 0.30) < 0.1 && p.y < 16); /* redstone */
+    int g5 = int(fbm3d(p+100., 0.45, 0.20, 3, 1.5, 0.38) < 0.1 && p.y < 16); /* diamond */
     /* stone (we use the same values for fbm as landscape but with a vertical offset) */
     int g7 = int(fbm3d(p+vec3(0,20,0), 0.5, 0.01, 5, 1.7, 0.5) > p.y / 255.);        /*  low-frequency landscape */
     g7 &= int(fbm3d(p+vec3(0,20,0), 0.5, 0.025, 3, 1.5, 0.5) > 0.45 * (p.y / 128.)); /* high-frequency landscape */
     g7 &= int(fbm3d(p+vec3(0,5,0), 0.5, 0.01, 5, 1.7, 0.5) > p.y / 255.);            /*  low-frequency landscape */
     g7 &= int(fbm3d(p+vec3(0,5,0), 0.5, 0.025, 3, 1.5, 0.5) > 0.45 * (p.y / 128.));  /* high-frequency landscape */
     /* pockets of dirt and gravel in undergrounds */
-    int g8 = int(fbm3d(p+40, 0.35, 0.18, 3, 1.0, 0.2) < 0.05 + (1.0-p.y/96.)*0.05);
-    int g9 = int(fbm3d(p-70, 0.48, 0.14, 3, 1.0, 0.2) < 0.05 + (1.0-p.y/200.)*0.05);
+    int g8 = int(abs(fbm3d(p+40, 0.32, 0.11, 3, 1.0, 0.5)*2.-1.) < 0.05 + (1.0-p.y/96.)*0.05);
+    int g9 = int(fbm3d(p-70, 0.45, 0.14, 3, 1.0, 0.2) < 0.05 + (1.0-p.y/200.)*0.05);
 
     res = float(g0 & g1 & g2 & g13) * DIRT;
 
@@ -121,14 +128,10 @@ float   map(vec3 p) {
     res = (res == STONE && g8 == 1 ? DIRT : res );
     res = (res == STONE && g9 == 1 ? GRAVEL : res );
 
-    // res = (g2 & g13) * COAL; // tmp
-    // res = g4 * IRON; // tmp
-    // res = g5 * DIAMOND; // tmp
-    // res = g13 * SAND;
+    // res = (g2) * COAL; // tmp
+    // res = g9 * GRAVEL; // tmp
     return res;
 }
-
-// TODO: Redo cave system, it is slow as fuck now and not really connected
 
 /* 3d volume texture */
 void    main() {
