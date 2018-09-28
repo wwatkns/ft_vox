@@ -9,7 +9,7 @@ camera(80, (float)env->getWindow().width / (float)env->getWindow().height, 0.1f,
     this->shader["skybox"]  = new Shader("./shader/vertex/skybox.vert.glsl", "./shader/fragment/skybox.frag.glsl");
     this->shader["fxaa"]  = new Shader("./shader/vertex/screenQuad.vert.glsl", "./shader/fragment/FXAA.frag.glsl");
     this->lastTime = std::chrono::steady_clock::now();
-    this->framerate = 60.0;
+    this->framerate = 1000.0;
 
     // this->initDepthMap();
     this->fxaa = false;

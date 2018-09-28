@@ -16,10 +16,10 @@ flat out int Id;
 
 uniform vec3 viewPos;
 
-// const float[4] aoCurve = float[4]( 1.0, 0.55, 0.3, .1 ); // BEST
+const float[4] aoCurve = float[4]( 1.0, 0.55, 0.3, .1 ); // BEST
 // const float[4] aoCurve = float[4]( 1.0, 0.7, 0.6, 0.15 ); // best soft
 // const float[4] aoCurve = float[4]( 1.0, 0.66, 0.33, 0. ); // linear
-const float[4] aoCurve = float[4]( 1.0, 0.4, 0.2, 0. ); // accentuated debug
+// const float[4] aoCurve = float[4]( 1.0, 0.4, 0.2, 0. ); // accentuated debug
 /* 3 +---+ 2
      | / |
    1 +---+ 0 */

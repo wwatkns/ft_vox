@@ -12,6 +12,7 @@
 #include <cmath>
 #include <algorithm>
 #include <array>
+#include <forward_list>
 #include <unordered_map>
 #include <queue>
 
@@ -68,13 +69,16 @@ public:
     void                        updateChunks( const glm::vec3& cameraPosition );
     void                        renderChunks( Shader shader, Camera& camera );
 
-    void                        generateChunkTextures( const glm::vec3& cameraPosition );
+    void                        addChunksToGenerationList( const glm::vec3& cameraPosition );
+    void                        generateChunkTextures( void );
     void                        generateChunkMeshes( void );
     void                        deleteChunk( void );
     glm::vec3                   getChunkPosition( const glm::vec3& position );
 
 private:
     std::unordered_map<Key, Chunk*, KeyHash>   chunks;
+    std::unordered_map<Key, bool, KeyHash>  chunksToGenerate;
+    int                                     maxChunksGeneratedPerFrame;
     glm::ivec3                  chunkSize;
     uint                        renderDistance; /* in blocs */
     uint                        maxHeight;
@@ -85,6 +89,7 @@ private:
     GLuint                      textureAtlas;
     uint8_t*                    dataBuffer;
     uint                        dataMargin;
+
 
     void                        setupChunkGenerationRenderingQuad( void );
     void                        setupChunkGenerationFbo( void );

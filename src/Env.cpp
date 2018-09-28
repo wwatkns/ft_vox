@@ -1,4 +1,5 @@
 #include "Env.hpp"
+#include <OpenGL/gl.h>
 
 Env::Env( void ) {
     try {
@@ -66,6 +67,7 @@ void	Env::initGlfwEnvironment( const std::string& glVersion ) {
 void	Env::initGlfwWindow( size_t width, size_t height ) {
 	if (!(this->window.ptr = glfwCreateWindow(width, height, "ft_vox", NULL, NULL)))
         throw Exception::InitError("glfwCreateWindow failed");
+
 	glfwMakeContextCurrent(this->window.ptr);
 	glfwSetFramebufferSizeCallback(this->window.ptr, this->framebufferSizeCallback);
 	glfwSetInputMode(this->window.ptr, GLFW_STICKY_KEYS, 1);

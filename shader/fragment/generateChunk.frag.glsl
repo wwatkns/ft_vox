@@ -6,9 +6,8 @@ in vec2 TexCoords;
 
 uniform vec3 chunkPosition;
 uniform vec3 chunkSize;
-uniform vec3 margin;
+uniform float margin;
 uniform sampler2D noiseSampler;
-uniform float uTime;
 
 #define PI 3.14159265359
 
@@ -95,20 +94,20 @@ float   map(vec3 p) {
     int g2 = int(fbm3d(p, 2.5, 0.15, 3, 1.0, 0.01) > 0.6);                 /* cave system, low-freq */
     int g13 = int(fbm3d(p * vec3(1,1.4,1), 3., 0.08, 5, 5.0, 0.05) > 0.6); /* cave system, high-freq */
     /* resource distribution */
-    int g3 = int(fbm3d(p+340., 0.29, 0.20, 4, 1.5, 0.37) < 0.1 && p.y < 130);/* coal */
-    int g4 = int(fbm3d(p-100., 0.37, 0.30, 4, 1.8, 0.30) < 0.1 && p.y < 64); /* iron */
-    int g10= int(fbm3d(p+100., 0.37, 0.35, 4, 1.2, 0.33) < 0.1 && p.y < 32); /* gold */
-    int g11= int(fbm3d(p-230., 0.35, 0.30, 4, 1.2, 0.33) < 0.1 && p.y < 32); /* lapis */
-    int g12= int(fbm3d(p-160., 0.30, 0.35, 4, 1.2, 0.33) < 0.1 && p.y < 16); /* redstone */
-    int g5 = int(fbm3d(p+100., 0.40, 0.20, 4, 1.5, 0.38) < 0.1 && p.y < 16); /* diamond */
+    int g3 = int(fbm3d(p+340., 0.29, 0.20, 3, 1.5, 0.37) < 0.1 && p.y < 130);/* coal */
+    int g4 = int(fbm3d(p-100., 0.37, 0.30, 3, 1.8, 0.30) < 0.1 && p.y < 64); /* iron */
+    int g10= int(fbm3d(p+100., 0.37, 0.35, 3, 1.2, 0.33) < 0.1 && p.y < 32); /* gold */
+    int g11= int(fbm3d(p-230., 0.35, 0.30, 3, 1.2, 0.33) < 0.1 && p.y < 32); /* lapis */
+    int g12= int(fbm3d(p-160., 0.30, 0.35, 3, 1.2, 0.33) < 0.1 && p.y < 16); /* redstone */
+    int g5 = int(fbm3d(p+100., 0.40, 0.20, 3, 1.5, 0.38) < 0.1 && p.y < 16); /* diamond */
     /* stone (we use the same values for fbm as landscape but with a vertical offset) */
     int g7 = int(fbm3d(p+vec3(0,20,0), 0.5, 0.01, 5, 1.7, 0.5) > p.y / 255.);        /*  low-frequency landscape */
     g7 &= int(fbm3d(p+vec3(0,20,0), 0.5, 0.025, 3, 1.5, 0.5) > 0.45 * (p.y / 128.)); /* high-frequency landscape */
     g7 &= int(fbm3d(p+vec3(0,5,0), 0.5, 0.01, 5, 1.7, 0.5) > p.y / 255.);            /*  low-frequency landscape */
     g7 &= int(fbm3d(p+vec3(0,5,0), 0.5, 0.025, 3, 1.5, 0.5) > 0.45 * (p.y / 128.));  /* high-frequency landscape */
     /* pockets of dirt and gravel in undergrounds */
-    int g8 = int(fbm3d(p+40, 0.35, 0.18, 4, 1.0, 0.2) < 0.05 + (1.0-p.y/96.)*0.05);
-    int g9 = int(fbm3d(p-70, 0.48, 0.14, 4, 1.0, 0.2) < 0.05 + (1.0-p.y/200.)*0.05);
+    int g8 = int(fbm3d(p+40, 0.35, 0.18, 3, 1.0, 0.2) < 0.05 + (1.0-p.y/96.)*0.05);
+    int g9 = int(fbm3d(p-70, 0.48, 0.14, 3, 1.0, 0.2) < 0.05 + (1.0-p.y/200.)*0.05);
 
     res = float(g0 & g1 & g2 & g13) * DIRT;
 
@@ -128,6 +127,8 @@ float   map(vec3 p) {
     // res = g13 * SAND;
     return res;
 }
+
+// TODO: Redo cave system, it is slow as fuck now and not really connected
 
 /* 3d volume texture */
 void    main() {

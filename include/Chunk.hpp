@@ -53,6 +53,7 @@ private:
     uint                margin;     /* the texture margin */
     bool                meshed;
     bool                outOfRange;
+    int                 y_step;
 
     void                setup( int mode );
     void                createModelTransform( const glm::vec3& position );
