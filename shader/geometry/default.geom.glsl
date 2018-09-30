@@ -6,12 +6,14 @@ in mat4 mvp[];
 in vec3 gFragPos[];
 flat in int gId[];
 flat in int gVisibleFaces[];
+flat in int gLight[];
 flat in ivec2 gAo[];
 
 out vec3 FragPos;
 out vec3 Normal;
 out vec2 TexCoords;
 out float Ao;
+out float Light;
 flat out int Id;
 
 uniform vec3 viewPos;
@@ -68,13 +70,13 @@ void    AddQuadFlipped(vec4 center, vec4 dy, vec4 dx, int ao, bool flip_uv) {
 void    main() {
     vec4 center = gl_in[0].gl_Position;
     
-    vec4 dx = mvp[0][0] / 2.0;// * 0.75;
-    vec4 dy = mvp[0][1] / 2.0;// * 0.75;
-    vec4 dz = mvp[0][2] / 2.0;// * 0.75;
+    vec4 dx = mvp[0][0] / 2.0;
+    vec4 dy = mvp[0][1] / 2.0;
+    vec4 dz = mvp[0][2] / 2.0;
 
     Id = gId[0];
     FragPos = gFragPos[0];
-
+    // Light = (float((gAo[0][1] & 0xFF000000) >> 24)/15)*0.75+0.25;
 
     // Normal = vec3( 1.0, 0.0, 0.0);
     // if ( (gVisibleFaces[0] & 0x20) != 0 && dot(Normal, (FragPos + dx.xyz) - viewPos) < 0) /* right */
@@ -100,8 +102,9 @@ void    main() {
     Normal = vec3( 1.0, 0.0, 0.0);
     if (dot(Normal, (FragPos + dx.xyz) - viewPos) < 0) {
         if ( (gVisibleFaces[0] & 0x20) != 0) { /* right */
+            Light = (float((gLight[0] & 0xF00000) >> 20)/15)*0.75+0.25;
             int ao = (gAo[0][0] & 0xFF000000) >> 24;
-            if ( (flippedQuads & 0x20) != 0 ) // can compute on CPU
+            if ( (flippedQuads & 0x20) != 0 )
                 AddQuadFlipped(center + dx, dy, dz, ao, false);
             else
                 AddQuad(center + dx, dy, dz, ao, false);
@@ -110,6 +113,7 @@ void    main() {
     else {
         Normal = vec3(-1.0, 0.0, 0.0);
         if ( (gVisibleFaces[0] & 0x10) != 0) { /* left */
+            Light = (float((gLight[0] & 0x0F0000) >> 16)/15)*0.75+0.25;
             int ao = (gAo[0][0] & 0x00FF0000) >> 16;
             if ( (flippedQuads & 0x10) != 0 )
                 AddQuadFlipped(center - dx, dz, dy, ao, true);
@@ -120,6 +124,7 @@ void    main() {
     Normal = vec3( 0.0, 1.0, 0.0);
     if (dot(Normal, (FragPos + dy.xyz) - viewPos) < 0) {
         if ( (gVisibleFaces[0] & 0x02) != 0) { /* top */
+            Light = (float((gLight[0] & 0x0000F0) >> 4)/15)*0.75+0.25;
             int ao = (gAo[0][1] & 0x0000FF00) >> 8;
             if ( (flippedQuads & 0x02) != 0 )
                 AddQuadFlipped(center + dy, dz, dx, ao, false);
@@ -130,6 +135,7 @@ void    main() {
     else {
         Normal = vec3( 0.0,-1.0, 0.0);
         if ( (gVisibleFaces[0] & 0x01) != 0) { /* bottom */
+            Light = (float(gLight[0] & 0x00000F)/15)*0.75+0.25;
             int ao = (gAo[0][1] & 0x000000FF);
             if ( (flippedQuads & 0x01) != 0 )
                 AddQuadFlipped(center - dy, dx, dz, ao, false);
@@ -140,6 +146,7 @@ void    main() {
     Normal = vec3( 0.0, 0.0, 1.0);
     if (dot(Normal, (FragPos + dz.xyz) - viewPos) < 0) {
         if ( (gVisibleFaces[0] & 0x08) != 0) { /* front */
+            Light = (float((gLight[0] & 0x00F000) >> 12)/15)*0.75+0.25;
             int ao = (gAo[0][0] & 0x0000FF00) >> 8;
             if ( (flippedQuads & 0x08) != 0 )
                 AddQuadFlipped(center + dz, dx, dy, ao, true);
@@ -150,6 +157,7 @@ void    main() {
     else {
         Normal = vec3( 0.0, 0.0,-1.0);
         if ( (gVisibleFaces[0] & 0x04) != 0) { /* back */
+            Light = (float((gLight[0] & 0x000F00) >> 8)/15)*0.75+0.25;
             int ao = (gAo[0][0] & 0x000000FF);
             if ( (flippedQuads & 0x04) != 0 )
                 AddQuadFlipped(center - dz, dy, dx, ao, false);
@@ -157,5 +165,4 @@ void    main() {
                 AddQuad(center - dz, dy, dx, ao, false);
         }
     }
-
 }

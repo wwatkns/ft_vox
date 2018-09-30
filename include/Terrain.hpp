@@ -14,7 +14,7 @@
 #include <array>
 #include <forward_list>
 #include <unordered_map>
-#include <queue>
+#include <map>
 
 #include "Exception.hpp"
 #include "Shader.hpp"
@@ -60,6 +60,12 @@ struct KeyHash {
     }
 };
 
+struct vec3Comp {
+    bool operator() (const glm::vec3& lhs, const glm::vec3& rhs) const {
+        return (lhs.y > rhs.y && lhs.x > rhs.x && lhs.z > rhs.z);
+    }
+};
+
 class Terrain {
 
 public:
@@ -72,13 +78,14 @@ public:
     void                        addChunksToGenerationList( const glm::vec3& cameraPosition );
     void                        generateChunkTextures( void );
     void                        generateChunkMeshes( void );
+    void                        computeChunkLight( void );
     void                        deleteChunk( void );
     glm::vec3                   getChunkPosition( const glm::vec3& position );
 
 private:
-    std::unordered_map<Key, Chunk*, KeyHash>   chunks;
-    std::unordered_map<Key, bool, KeyHash>  chunksToGenerate;
-    int                                     maxChunksGeneratedPerFrame;
+    std::unordered_map<Key, Chunk*, KeyHash>    chunks;
+    std::map<glm::vec3, bool, vec3Comp>         chunksToGenerate; /* we need a map to be able to generate the chunks in order from top to bottom */
+    int                                         maxChunksGeneratedPerFrame;
     glm::ivec3                  chunkSize;
     uint                        renderDistance; /* in blocs */
     uint                        maxHeight;
@@ -89,7 +96,6 @@ private:
     GLuint                      textureAtlas;
     uint8_t*                    dataBuffer;
     uint                        dataMargin;
-
 
     void                        setupChunkGenerationRenderingQuad( void );
     void                        setupChunkGenerationFbo( void );

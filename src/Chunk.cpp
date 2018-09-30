@@ -1,27 +1,37 @@
 #include "Chunk.hpp"
 #include "glm/ext.hpp"
 
-Chunk::Chunk( const glm::vec3& position, const glm::ivec3& chunkSize, const uint8_t* texture, const uint margin ) : position(position), chunkSize(chunkSize), margin(margin), meshed(false), outOfRange(false) {
+Chunk::Chunk( const glm::vec3& position, const glm::ivec3& chunkSize, const uint8_t* texture, const uint margin ) : position(position), chunkSize(chunkSize), margin(margin), meshed(false), lighted(false), outOfRange(false) {
     this->createModelTransform(position);
     this->paddedSize = chunkSize + static_cast<int>(margin);
     this->texture = static_cast<uint8_t*>(malloc(sizeof(uint8_t) * paddedSize.x * paddedSize.y * paddedSize.z));
     memcpy(this->texture, texture, paddedSize.x * paddedSize.y * paddedSize.z);
     this->y_step = paddedSize.x * paddedSize.z;
+
+    /* the light-mask is only a horizontal slice containing information about wether the sky is seen from this vertical position */
+    this->lightMask = static_cast<uint8_t*>(malloc(sizeof(uint8_t) * chunkSize.x * chunkSize.z));
+    memset(this->lightMask, 15, chunkSize.x * chunkSize.z);
+
+    // NEW
+    this->lightMap = static_cast<uint8_t*>(malloc(sizeof(uint8_t) * paddedSize.x * paddedSize.y * paddedSize.z));
+    memset(this->lightMap, 15, paddedSize.x * paddedSize.y * paddedSize.z);
 }
 
 Chunk::~Chunk( void ) {
     free(this->texture);
     this->texture = NULL;
+    free(this->lightMask);
+    this->lightMask = NULL;
     glDeleteBuffers(1, &this->vao);
     glDeleteBuffers(1, &this->vbo);
 }
 
 uint8_t Chunk::getVisibleFaces( int i ) {
     uint8_t faces = 0x0;
-    faces |=  (this->texture[i + 1                          ] == 0) << 5; // right
-    faces |=  (this->texture[i - 1                          ] == 0) << 4; // left
-    faces |=  (this->texture[i + paddedSize.x               ] == 0) << 3; // front
-    faces |=  (this->texture[i - paddedSize.x               ] == 0) << 2; // back
+    faces |=  (this->texture[i + 1           ] == 0) << 5; // right
+    faces |=  (this->texture[i - 1           ] == 0) << 4; // left
+    faces |=  (this->texture[i + paddedSize.x] == 0) << 3; // front
+    faces |=  (this->texture[i - paddedSize.x] == 0) << 2; // back
     faces |=  (this->texture[i + this->y_step] == 0) << 1; // top
     faces |=  (this->texture[i - this->y_step] == 0) << 0; // bottom
     return faces;
@@ -29,10 +39,10 @@ uint8_t Chunk::getVisibleFaces( int i ) {
 
 bool    Chunk::isVoxelCulled( int i ) {
     uint8_t b = 0x1;
-    b &= (this->texture[i + 1                          ] != 0); // right
-    b &= (this->texture[i - 1                          ] != 0); // left
-    b &= (this->texture[i + paddedSize.x               ] != 0); // front
-    b &= (this->texture[i - paddedSize.x               ] != 0); // back
+    b &= (this->texture[i + 1           ] != 0); // right
+    b &= (this->texture[i - 1           ] != 0); // left
+    b &= (this->texture[i + paddedSize.x] != 0); // front
+    b &= (this->texture[i - paddedSize.x] != 0); // back
     b &= (this->texture[i + this->y_step] != 0); // top
     b &= (this->texture[i - this->y_step] != 0); // bottom
     return b;
@@ -131,12 +141,13 @@ glm::ivec2  Chunk::getVerticesAoValue( int i, uint8_t visibleFaces ) {
 
 void    Chunk::buildMesh( void ) {
     const int m = this->margin / 2;
-    this->meshed = true;
     this->voxels.reserve(chunkSize.x * chunkSize.y * chunkSize.z);
-    for (int y = 0; y < chunkSize.y; ++y)
+
+    for (int y = chunkSize.y-1; y >= 0; --y)
         for (int z = 0; z < chunkSize.z; ++z)
             for (int x = 0; x < chunkSize.x; ++x) {
                 int i = (x+m) + (z+m) * paddedSize.x + (y+m) * this->y_step;
+                int j = x + z * chunkSize.x + y * chunkSize.x * chunkSize.z;
                 if (this->texture[i] != 0 && !isVoxelCulled(i)) { /* if voxel is not air and not culled */
                     uint8_t visibleFaces = getVisibleFaces(i);
                     uint8_t b = static_cast<uint8_t>(this->texture[i] - 1);
@@ -144,10 +155,58 @@ void    Chunk::buildMesh( void ) {
                     if (texture[i] == 1 && texture[i + this->y_step] == 0)
                         b = 1;
                     glm::ivec2 ao = getVerticesAoValue(i, visibleFaces);
-                    this->voxels.push_back( (tPoint){ glm::vec3(x, y, z), ao, b, visibleFaces } );
+                    // ao.y |= ((int)lightMap[j] << 24); /* pack light value (8bits) at most-left in ao.y */
+                    int light =
+                        ((int)lightMap[i + 1           ] << 20) |
+                        ((int)lightMap[i - 1           ] << 16) |
+                        ((int)lightMap[i + paddedSize.x] << 12) |
+                        ((int)lightMap[i - paddedSize.x] <<  8) |
+                        ((int)lightMap[i + this->y_step] <<  4) |
+                        ((int)lightMap[i - this->y_step] <<  0);
+                    this->voxels.push_back( (tPoint){ glm::vec3(x, y, z), ao, b, visibleFaces, light } );
                 }
             }
     this->setup(GL_STATIC_DRAW);
+    this->meshed = true;
+}
+
+// void    Chunk::getNeighbouringLightLevel( void ) {
+
+// }
+
+void    Chunk::computeLight( const uint8_t* aboveLightMask ) {
+    const int m = this->margin / 2;
+
+    if (aboveLightMask != nullptr)
+        memcpy(lightMask, aboveLightMask, chunkSize.x * chunkSize.z); // copies the mask as current lightMask
+
+    std::queue<lightNode_t>   lightNodes;
+    /* first pass */
+    for (int y = chunkSize.y-1; y >= 0; --y)
+        for (int z = 0; z < chunkSize.z; ++z)
+            for (int x = 0; x < chunkSize.x; ++x) {
+                int i = (x+m) + (z+m) * paddedSize.x + (y+m) * this->y_step;
+                int j = x + z * chunkSize.x;
+                int k = j + y * chunkSize.x * chunkSize.z;
+                if (this->texture[i] == 0 && (this->lightMask[j] == 15) ) { /* if voxel is air, and above is air */
+                    lightMask[j] = 15;
+                }
+                if (this->texture[i] != 0) { /* if voxel is not air */
+                    lightMask[j] = 0;
+                    lightNodes.push({ i, i });
+                }
+                lightMap[i] = lightMask[j];
+            }
+    /* propagation pass */
+    // while (lightNodes.empty() == false) {
+    //     lightNode_t& node = lightNodes.front();
+    //     int t_index = node.t_index;
+    //     int l_index = node.l_index;
+    //     lightNodes.pop();
+
+    //     // if ()
+    // }
+    this->lighted = true;
 }
 
 void    Chunk::render( Shader shader, Camera& camera, GLuint textureAtlas, uint renderDistance ) {
@@ -190,6 +249,9 @@ void    Chunk::setup( int mode ) {
     /* occluded faces attribute */
     glEnableVertexAttribArray(3);
 	glVertexAttribIPointer(3, 1, GL_UNSIGNED_BYTE, sizeof(tPoint), reinterpret_cast<GLvoid*>(offsetof(tPoint, visibleFaces)));
+    /* light attribute */
+    glEnableVertexAttribArray(4);
+	glVertexAttribIPointer(4, 1, GL_INT, sizeof(tPoint), reinterpret_cast<GLvoid*>(offsetof(tPoint, light)));
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);

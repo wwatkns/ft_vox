@@ -44,6 +44,40 @@ glm::vec3   Terrain::getChunkPosition( const glm::vec3& position ) {
     return chunkPosition;
 }
 
+// void    Terrain::addChunksToGenerationList( const glm::vec3& cameraPosition ) {
+//     /*  naive algorithm : 
+//         * iterate on all the positions around player in render distance range and create chunk if it does not exist.
+//     */
+//     int height = this->maxHeight / this->chunkSize.y;
+//     glm::ivec3 dist = glm::ivec3(this->renderDistance) / this->chunkSize;
+//     for (int y = height; y >= 0; y--) /* we build a column of chunks each time */
+//         for (int z = -dist.z; z < dist.z; ++z)
+//             for (int x = -dist.x; x < dist.x; ++x) {
+//                 /* if chunk was never generated */
+//                 Key key = { this->getChunkPosition(cameraPosition) * glm::vec3(1, 0, 1) + glm::vec3(x, y, z) };
+//                 if (this->chunks.find(key) == this->chunks.end() && this->chunksToGenerate.find(key) == this->chunksToGenerate.end()) {
+//                     this->chunksToGenerate.insert( { key, true } );
+//                 }
+//             }
+// }
+
+/* allows the chunks to be drawn from top to bottom, one column of chunk at a time */
+static uint64_t hashKey(const Key& k) {
+    uint64_t    hash = 0;
+    hash |= static_cast<uint64_t>(static_cast<int>(8-k.p.y) + 0x7FFF);
+    hash |= static_cast<uint64_t>(static_cast<int>(  k.p.z) + 0x7FFF) << 16;
+    hash |= static_cast<uint64_t>(static_cast<int>(  k.p.x) + 0x7FFF) << 32;
+    return (hash);
+}
+
+static Key  unhashKey(const uint64_t& hash) {
+    Key key;
+    key.p.y = 8-(static_cast<float>((hash & 0x00000000FFFF)      ) - 0x7FFF);
+    key.p.z =    static_cast<float>((hash & 0x0000FFFF0000) >> 16) - 0x7FFF;
+    key.p.x =    static_cast<float>((hash & 0xFFFF00000000) >> 32) - 0x7FFF;
+    return (key);
+}
+
 void    Terrain::addChunksToGenerationList( const glm::vec3& cameraPosition ) {
     /*  naive algorithm : 
         * iterate on all the positions around player in render distance range and create chunk if it does not exist.
@@ -55,52 +89,80 @@ void    Terrain::addChunksToGenerationList( const glm::vec3& cameraPosition ) {
             for (int x = -dist.x; x < dist.x; ++x) {
                 /* if chunk was never generated */
                 Key key = { this->getChunkPosition(cameraPosition) * glm::vec3(1, 0, 1) + glm::vec3(x, y, z) };
-                if (this->chunks.find(key) == this->chunks.end() && this->chunksToGenerate.find(key) == this->chunksToGenerate.end()) {
-                    this->chunksToGenerate.insert( { key, true } );
-                }
+                if (this->chunks.find(key) == this->chunks.end() && this->chunksToGenerate.find(key.p) == this->chunksToGenerate.end())
+                    this->chunksToGenerate.insert( { key.p, true } );
             }
 }
+    
+// void    Terrain::generateChunkTextures( void ) {
+//     static tTimePoint last = std::chrono::steady_clock::now();
+//     bool work = false;
+
+//     std::forward_list<Key> toDelete;
+//     int chunksGenerated = 0;
+//     for (std::pair<Key, bool> chunk : this->chunksToGenerate) {
+//         if (chunksGenerated < this->maxChunksGeneratedPerFrame) {
+//             glm::vec3 position = chunk.first.p * (glm::vec3)this->chunkSize;
+//             this->renderChunkGeneration(position, this->dataBuffer);
+//             this->chunks.insert( { chunk.first, new Chunk(position, this->chunkSize, this->dataBuffer, this->dataMargin) } );
+//             toDelete.push_front(chunk.first);
+//             chunksGenerated++;
+//             work = true;
+//         }
+//     }
+//     for ( auto it = toDelete.begin(); it != toDelete.end(); ++it )
+//             this->chunksToGenerate.erase( *it );
+    
+//     tTimePoint current = std::chrono::steady_clock::now();
+//     if (work)
+//         std::cout << "> generation: " << (static_cast<tMilliseconds>(current - last)).count() << " ms" << std::endl;
+//     last = current;
+// }
 
 void    Terrain::generateChunkTextures( void ) {
-    static tTimePoint last = std::chrono::steady_clock::now();
-    bool work = false;
+    std::forward_list<glm::vec3> toDelete;
 
-    std::forward_list<Key> toDelete;
     int chunksGenerated = 0;
-    for (std::pair<Key, bool> chunk : this->chunksToGenerate) {
+    for (auto it = this->chunksToGenerate.begin(); it != this->chunksToGenerate.end(); ++it) {
         if (chunksGenerated < this->maxChunksGeneratedPerFrame) {
-            glm::vec3 position = chunk.first.p * (glm::vec3)this->chunkSize;
+            /* generate texture */
+            Key key = { it->first };
+            glm::vec3 position = key.p * (glm::vec3)this->chunkSize;
             this->renderChunkGeneration(position, this->dataBuffer);
-            this->chunks.insert( { chunk.first, new Chunk(position, this->chunkSize, this->dataBuffer, this->dataMargin) } );
-            toDelete.push_front(chunk.first);
+            this->chunks.insert( { key, new Chunk(position, this->chunkSize, this->dataBuffer, this->dataMargin) } );
+            toDelete.push_front(it->first);
             chunksGenerated++;
-            work = true;
         }
     }
-    for ( auto it = toDelete.begin(); it != toDelete.end(); ++it )
-            this->chunksToGenerate.erase( *it );
-    
-    tTimePoint current = std::chrono::steady_clock::now();
-    if (work)
-        std::cout << "> generation: " << (static_cast<tMilliseconds>(current - last)).count() << " ms" << std::endl;
-    last = current;
+    for (auto it = toDelete.begin(); it != toDelete.end(); ++it) {
+        this->chunksToGenerate.erase( *it );
+    }
 }
 
 void    Terrain::generateChunkMeshes( void ) {
     static tTimePoint last = std::chrono::steady_clock::now();
     bool work = false;
 
-    for (std::pair<Key, Chunk*> chunk : this->chunks) {
-        if (!chunk.second->isMeshed()) {
-            chunk.second->buildMesh();
+    for (auto it = this->chunks.begin(); it != this->chunks.end(); ++it) {
+        if (!it->second->isMeshed()) {
+            it->second->buildMesh();
             work = true;
         }
     }
-
+    /* display time */
     tTimePoint current = std::chrono::steady_clock::now();
-    if (work)
-        std::cout << "> meshing: " << (static_cast<tMilliseconds>(current - last)).count() << " ms" << std::endl;
+    if (work) std::cout << "> meshing: " << (static_cast<tMilliseconds>(current - last)).count() << " ms" << std::endl;
     last = current;
+}
+
+void    Terrain::computeChunkLight( void ) {
+    for (auto it = this->chunks.begin(); it != this->chunks.end(); ++it) {
+        if (!it->second->isLighted()) {
+            /* the lightMask is the last vertical slice of the LightMap of previous chunk (must compute it) */
+            const uint8_t* aboveLightMask = (chunks.find({it->first.p + glm::vec3(0,1,0)}) != chunks.end() ? chunks[{it->first.p + glm::vec3(0,1,0)}]->getLightMask() : nullptr);
+            it->second->computeLight(aboveLightMask);
+        }
+    }
 }
 
 void    Terrain::renderChunkGeneration( const glm::vec3& position, uint8_t* data ) {
@@ -145,6 +207,7 @@ void    Terrain::renderChunks( Shader shader, Camera& camera ) {
 void    Terrain::updateChunks( const glm::vec3& cameraPosition ) {
     this->addChunksToGenerationList(cameraPosition);
     this->generateChunkTextures();
+    this->computeChunkLight();
     this->generateChunkMeshes();
 }
 

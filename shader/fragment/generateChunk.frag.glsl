@@ -152,12 +152,3 @@ void    main() {
     // FragColor.r = sqrt(int(sin(worldPos.y/16.+0.5*PI)*sin(worldPos.z/16.+0.5*PI)*0.5+0.5 < worldPos.x/32.) * STONE); // X
     // FragColor.r = sqrt(int(sin(worldPos.x/16.+0.5*PI)*sin(worldPos.z/16.+0.5*PI)*0.5+0.5 > worldPos.y/32.) * STONE); // Y
 }
-
-/* 2d height-map example */
-// void    main() {
-//     vec2 uv = vec2(TexCoords.x, 1.0 - TexCoords.y);
-//     vec2 c_uv = uv - 1. / (chunkSize.xz * 2.0);
-//     vec3 chunk = chunkPosition / chunkSize;
-//     vec2 worldPos2d = chunk.xz - 1.0 + c_uv.xy;
-//     FragColor.r = fbm2d(worldPos2d, 0.5, 0.7, 4, 1.5, 0.5);
-// }
