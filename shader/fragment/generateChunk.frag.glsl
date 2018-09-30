@@ -81,6 +81,8 @@ float   fbm3d(in vec3 st, in float amplitude, in float frequency, in int octaves
 #define DIAMOND 10/255.
 #define GRAVEL 11/255.
 #define SAND 12/255.
+#define OAK_WOOD 13/255.
+#define OAK_LEAVES 14/255.
 
 float   map(vec3 p) {
     /* TODO : implement biomes with voronoi cells */
@@ -97,8 +99,8 @@ float   map(vec3 p) {
                 //   (1-abs( fbm3d(vec3(p.z, p.y+4., p.x - 42.), 0.48, 0.030, 6, 0.7, 0.49) * 2.-1.)) < 0.92);
     // int g2 = int( (1-abs( fbm3d(vec3(p.x*0.5-5, p.y, p.z + 21.), 0.48, 0.037, 6, 1.3, 0.45) * 2.-1.)) * 
                 //   (1-abs( fbm3d(vec3(p.z*0.5, p.y+4., p.x - 42.), 0.48, 0.035, 6, 0.7, 0.45) * 2.-1.)) < 0.92);
-    int g2 = int( (1-abs( fbm3d(vec3(p.x*0.5-5,  p.y, p.z + 21.), 0.44, 0.067, 6, 1.3, 0.49) * 2.-1.)) * 
-                  (1-abs( fbm3d(vec3(p.z*0.5, p.y+4., p.x - 42.), 0.44, 0.065, 6, 0.7, 0.49) * 2.-1.)) < 0.91);
+    int g2 = int( (1-abs( fbm3d(vec3(p.x-5,  p.y, p.z + 21.), 0.44, 0.067, 6, 1.3, 0.49) * 2.-1.)) * 
+                  (1-abs( fbm3d(vec3(p.z, p.y+4., p.x - 42.), 0.44, 0.065, 6, 0.7, 0.49) * 2.-1.)) < 0.91);
     int g13 = int(fbm3d(p, 0.44, 0.04, 6, 2.0, 0.3) < 0.5);
     /* resource distribution */
     int g3 = int(fbm3d(p+340., 0.35, 0.20, 3, 1.5, 0.37) < 0.1 && p.y < 130);/* coal */
@@ -115,6 +117,9 @@ float   map(vec3 p) {
     /* pockets of dirt and gravel in undergrounds */
     int g8 = int(abs(fbm3d(p+40, 0.32, 0.11, 3, 1.0, 0.5)*2.-1.) < 0.05 + (1.0-p.y/96.)*0.05);
     int g9 = int(fbm3d(p-70, 0.45, 0.14, 3, 1.0, 0.2) < 0.05 + (1.0-p.y/200.)*0.05);
+    /* trees */
+    // int g14= int(fbm2d(p.xz, 0.25, 0.01, 4, 2.7, 0.2) < 0.5);
+    //    g14&= int(fbm2d(p.xz, 0.47, 0.25, 4, 2.5, 0.1) < 0.5);
 
     res = float(g0 & g1 & g2 & g13) * DIRT;
 
@@ -127,6 +132,7 @@ float   map(vec3 p) {
     res = (res == STONE && g3 == 1 ? COAL : res );
     res = (res == STONE && g8 == 1 ? DIRT : res );
     res = (res == STONE && g9 == 1 ? GRAVEL : res );
+    // res = (res == DIRT && g14 == 0 ? OAK_WOOD : res);
 
     // res = (g2) * COAL; // tmp
     // res = g9 * GRAVEL; // tmp

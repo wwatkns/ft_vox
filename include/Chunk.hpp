@@ -18,7 +18,7 @@
 #include "Camera.hpp"
 #include "utils.hpp"
 
-
+/* we could optimize that */
 typedef struct  sPoint {
     glm::vec3   position;
     glm::ivec2  ao;
@@ -27,11 +27,6 @@ typedef struct  sPoint {
     int         light; // for now we have infos about which faces receiving light (4bits of info for 6 faces, 24bits used)
 }               tPoint;
 
-typedef struct  lightNode_s {
-    int t_index;
-    int l_index;
-}               lightNode_t;
-
 class Chunk {
 
 public:
@@ -39,7 +34,7 @@ public:
     ~Chunk( void );
 
     void                buildMesh( void );
-    void                computeLight( const uint8_t* aboveLightMask );
+    void                computeLight( std::array<const uint8_t*, 6> neighbouringChunks, const uint8_t* aboveLightMask );
     void                render( Shader shader, Camera& camera, GLuint textureAtlas, uint renderDistance );
     /* getters */
     const GLuint&       getVao( void ) const { return vao; };
@@ -47,10 +42,14 @@ public:
     const glm::vec3&    getPosition( void ) const { return position; };
     const uint8_t*      getTexture( void ) const { return texture; };
     const uint8_t*      getLightMask( void ) const { return lightMask; };
+    const uint8_t*      getLightMap( void ) const { return lightMap; };
     /* state checks */
     const bool          isMeshed( void ) const { return meshed; };
     const bool          isLighted( void ) const { return lighted; };
+    const bool          isUnderground( void ) const { return underground; };
     const bool          isOutOfRange( void ) const { return outOfRange; };
+    const bool          isBorder( int i );
+    const bool          isMaskZero( const uint8_t* mask );
 
 private:
     GLuint              vao;        // Vertex Array Object
@@ -66,6 +65,7 @@ private:
     uint                margin;     /* the texture margin */
     bool                meshed;
     bool                lighted;
+    bool                underground;
     bool                outOfRange;
     int                 y_step;
 

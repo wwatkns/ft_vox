@@ -63,7 +63,7 @@ sMaterial material = sMaterial(
 );
 
 /* the offsets for the bloc textures (top, bottom, side) */
-const sOffset offsets[12] = sOffset[](
+const sOffset offsets[14] = sOffset[](
     sOffset( vec2(2, 0), vec2(2, 0), vec2(2, 0) ), // 0: dirt
     sOffset( vec2(0, 0), vec2(2, 0), vec2(3, 0) ), // 1: grass
     sOffset( vec2(1, 0), vec2(1, 0), vec2(1, 0) ), // 2: stone
@@ -75,7 +75,9 @@ const sOffset offsets[12] = sOffset[](
     sOffset( vec2(3, 3), vec2(3, 3), vec2(3, 3) ), // 8: redstone ore
     sOffset( vec2(2, 3), vec2(2, 3), vec2(2, 3) ), // 9: diamond ore
     sOffset( vec2(3, 1), vec2(3, 1), vec2(3, 1) ), //10: gravel
-    sOffset( vec2(2, 1), vec2(2, 1), vec2(2, 1) )  //11: sand
+    sOffset( vec2(2, 1), vec2(2, 1), vec2(2, 1) ), //11: sand
+    sOffset( vec2(5, 1), vec2(5, 1), vec2(4, 1) ), //12: oak wood
+    sOffset( vec2(5, 3), vec2(5, 3), vec2(5, 3) )  //13: oak leaves
 );
 const vec2 atlasSize = vec2(24, 42);
 
@@ -99,7 +101,7 @@ void main() {
     //     return;
     // }
     // FragColor = vec4((Normal * 0.5 + 0.4) * vec3(1., 0.5, 0.5), 1.0);
-    FragColor = vec4(getBlocTexture().xyz * result * Ao * Light, 1.0);
+    FragColor = vec4(getBlocTexture().xyz * result * Ao * (Light*0.9+0.1), 1.0);
     // FragColor = vec4(getBlocTexture().xyz * Ao, 1.0);
 }
 

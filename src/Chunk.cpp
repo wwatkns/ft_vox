@@ -1,7 +1,7 @@
 #include "Chunk.hpp"
 #include "glm/ext.hpp"
 
-Chunk::Chunk( const glm::vec3& position, const glm::ivec3& chunkSize, const uint8_t* texture, const uint margin ) : position(position), chunkSize(chunkSize), margin(margin), meshed(false), lighted(false), outOfRange(false) {
+Chunk::Chunk( const glm::vec3& position, const glm::ivec3& chunkSize, const uint8_t* texture, const uint margin ) : position(position), chunkSize(chunkSize), margin(margin), meshed(false), lighted(false), underground(false), outOfRange(false) {
     this->createModelTransform(position);
     this->paddedSize = chunkSize + static_cast<int>(margin);
     this->texture = static_cast<uint8_t*>(malloc(sizeof(uint8_t) * paddedSize.x * paddedSize.y * paddedSize.z));
@@ -9,12 +9,14 @@ Chunk::Chunk( const glm::vec3& position, const glm::ivec3& chunkSize, const uint
     this->y_step = paddedSize.x * paddedSize.z;
 
     /* the light-mask is only a horizontal slice containing information about wether the sky is seen from this vertical position */
-    this->lightMask = static_cast<uint8_t*>(malloc(sizeof(uint8_t) * chunkSize.x * chunkSize.z));
-    memset(this->lightMask, 15, chunkSize.x * chunkSize.z);
+    // this->lightMask = static_cast<uint8_t*>(malloc(sizeof(uint8_t) * chunkSize.x * chunkSize.z));
+    // memset(this->lightMask, 15, chunkSize.x * chunkSize.z);
+    this->lightMask = static_cast<uint8_t*>(malloc(sizeof(uint8_t) * paddedSize.x * paddedSize.z));
+    memset(this->lightMask, 15, paddedSize.x * paddedSize.z);
 
     // NEW
     this->lightMap = static_cast<uint8_t*>(malloc(sizeof(uint8_t) * paddedSize.x * paddedSize.y * paddedSize.z));
-    memset(this->lightMap, 15, paddedSize.x * paddedSize.y * paddedSize.z);
+    memset(this->lightMap, 0, paddedSize.x * paddedSize.y * paddedSize.z);
 }
 
 Chunk::~Chunk( void ) {
@@ -152,17 +154,13 @@ void    Chunk::buildMesh( void ) {
                     uint8_t visibleFaces = getVisibleFaces(i);
                     uint8_t b = static_cast<uint8_t>(this->texture[i] - 1);
                     /* change dirt to grass on top */
-                    if (texture[i] == 1 && texture[i + this->y_step] == 0)
+                    // if (texture[i] == 1 && texture[i + this->y_step] == 0 && lightMap[i + this->y_step] > 2)
+                    if (texture[i] == 1 && texture[i + this->y_step] == 0 && !this->underground)
                         b = 1;
                     glm::ivec2 ao = getVerticesAoValue(i, visibleFaces);
-                    // ao.y |= ((int)lightMap[j] << 24); /* pack light value (8bits) at most-left in ao.y */
-                    int light =
-                        ((int)lightMap[i + 1           ] << 20) |
-                        ((int)lightMap[i - 1           ] << 16) |
-                        ((int)lightMap[i + paddedSize.x] << 12) |
-                        ((int)lightMap[i - paddedSize.x] <<  8) |
-                        ((int)lightMap[i + this->y_step] <<  4) |
-                        ((int)lightMap[i - this->y_step] <<  0);
+                    int light = ((int)lightMap[i + 1           ] << 20) | ((int)lightMap[i - 1           ] << 16) |
+                                ((int)lightMap[i + paddedSize.x] << 12) | ((int)lightMap[i - paddedSize.x] <<  8) |
+                                ((int)lightMap[i + this->y_step] <<  4) | ((int)lightMap[i - this->y_step]);
                     this->voxels.push_back( (tPoint){ glm::vec3(x, y, z), ao, b, visibleFaces, light } );
                 }
             }
@@ -174,40 +172,152 @@ void    Chunk::buildMesh( void ) {
 
 // }
 
-void    Chunk::computeLight( const uint8_t* aboveLightMask ) {
+/*
+    +---+---+---+---++---+---+---+---+
+    | 15| 15|###|###|| 15|###|###|###|
+    +---+---+---+ - ++---+---+---+---+
+    | 15| 15|###| 12|| 15| 14| 13| 12|
+    +---+---+---+ - ++---+---+---+---+
+    | 15| 15| 14| 13||###|###| 12| 11|
+    +---+---+---+---++ - +---+---+---+
+    |###| 15| 14| 13|| 9 | 10| 11| 10|
+    +---+---+---+---++ - +---+---+---+
+    * The issue is that we must also update the chunk on the left when values of the right chunk have been
+      computed. It results in hard cut of shadows on one side, and smooth transition on the other...
+    * One way to solve that is to update them, though they are meshed, so we have to remesh them...
+    * Another solution could be to have a pass for all texture generation in chunksToLoad queue,
+      when that is done, we compute the light, and then we mesh all those chunks. We would still have to
+      remesh the chunks at borders of new batches, but the complexity is reduced a bit. (still, it's far from optimal)
+
+    +---+---+---+---++---+---+---+---+
+    | 15| 15|###|###|| 15|###|###|###|
+    +---+---+---+---++---+---+---+---+
+    | 15| 15|###| 14|| 15| 14| 13| 12|
+    +---+---+---+---++---+---+---+---+
+    | 15| 15| 14| 13||###|###| 12| 11|
+    +---+---+---+---++---+---+---+---+
+    |###| 15| 14| 13|| 12| 11| 11| 10|
+    +---+---+---+---++---+---+---+---+
+
+    +---+---+---+---++---+---+---+---+
+    | 15| 15|###|###|| 5 |###|###| 10|
+    +---+---+---+---++---+---+---+---+
+    | 15| 15|###| 12|| 6 | 7 | 8 | 9 |
+    +---+---+---+---++---+---+---+---+
+    | 15| 15| 14| 13||###|###| 7 | 8 |
+    +---+---+---+---++---+---+---+---+
+    |###| 15| 14| 13|| 4 | 5 | 6 | 7 |
+    +---+---+---+---++---+---+---+---+
+*/
+
+const bool  Chunk::isBorder( int i ) {
     const int m = this->margin / 2;
+    return (i % paddedSize.x < m || /* left border */
+            i % paddedSize.x >= chunkSize.x + m || /* right border */
+            i % this->y_step < paddedSize.x * m || /* back border */
+            i % this->y_step >= this->y_step - paddedSize.x * m || /* front border */
+            i % (this->y_step * paddedSize.y) < this->y_step * m || /* top border */
+            i % (this->y_step * paddedSize.y) >= this->y_step * paddedSize.y - this->y_step * m); /* bottom border */
+}
 
-    if (aboveLightMask != nullptr)
-        memcpy(lightMask, aboveLightMask, chunkSize.x * chunkSize.z); // copies the mask as current lightMask
+const bool  Chunk::isMaskZero( const uint8_t* mask ) {
+    const int m = this->margin / 2;
+    bool b = false;
+    for (int z = -1; z < chunkSize.z+1 && !b; ++z)
+        for (int x = -1; x < chunkSize.x+1 && !b; ++x) {
+            int j = (x+m) + (z+m) * paddedSize.x;
+            b = (mask[j] != 0);
+        }
+    return !b;
+}
 
-    std::queue<lightNode_t>   lightNodes;
-    /* first pass */
-    for (int y = chunkSize.y-1; y >= 0; --y)
-        for (int z = 0; z < chunkSize.z; ++z)
-            for (int x = 0; x < chunkSize.x; ++x) {
-                int i = (x+m) + (z+m) * paddedSize.x + (y+m) * this->y_step;
-                int j = x + z * chunkSize.x;
-                int k = j + y * chunkSize.x * chunkSize.z;
-                if (this->texture[i] == 0 && (this->lightMask[j] == 15) ) { /* if voxel is air, and above is air */
+void    Chunk::computeLight( std::array<const uint8_t*, 6> neighbouringChunks, const uint8_t* aboveLightMask ) {
+    const int m = this->margin / 2;
+    std::queue<int>   lightNodes;
+
+    if (aboveLightMask != nullptr) { // the lightMask of the chunk above
+        memcpy(lightMask, aboveLightMask, this->y_step); // copies the mask as current lightMask
+        if (isMaskZero(aboveLightMask)) { // if no light is present, skip
+            this->underground = true;
+            this->lighted = true;
+            return ;
+        }
+    }
+    /* first pass (/!\ DON'T TOUCH, IT'S PERFECT) */
+    for (int y = chunkSize.y; y >= 0; --y)
+        for (int z = -1; z < chunkSize.z+1; ++z)
+            for (int x = -1; x < chunkSize.x+1; ++x) {
+                int j = (x+m) + (z+m) * paddedSize.x;
+                int i = j + (y+m) * this->y_step;
+                if (this->texture[i] == 0 && (this->lightMask[j] == 15) ) { /* if voxel is transparent, and voxel above also */
                     lightMask[j] = 15;
+                    lightNodes.push(i); /* optimization idea: add node only if 1 or more neighbouring voxel light is 0 (but transparent) */
                 }
-                if (this->texture[i] != 0) { /* if voxel is not air */
+                if (this->texture[i] != 0) /* if voxel is opaque */
                     lightMask[j] = 0;
-                    lightNodes.push({ i, i });
-                }
                 lightMap[i] = lightMask[j];
             }
     /* propagation pass */
     // while (lightNodes.empty() == false) {
-    //     lightNode_t& node = lightNodes.front();
-    //     int t_index = node.t_index;
-    //     int l_index = node.l_index;
+    //     int index = lightNodes.front();
     //     lightNodes.pop();
 
-    //     // if ()
+    //     const std::array<int, 6> offset = { 1, -1, this->y_step, -this->y_step, paddedSize.x, -paddedSize.x };
+    //     const std::array<int, 6> offsetInv = { -chunkSize.x, chunkSize.x, -this->y_step * chunkSize.y, this->y_step * chunkSize.y, -paddedSize.x * chunkSize.z, paddedSize.x * chunkSize.z };
+
+    //     int currentLight = this->lightMap[index];
+
+    //     for (int side = 0; side < 6; side++) {
+
+    //         if (!isBorder(index + offset[side])) {
+    //             /* if block is opaque and light value is at least 2 under current light */
+    //             if (this->texture[index + offset[side]] == 0 && this->lightMap[index + offset[side]] + 2 <= currentLight) {
+    //                 this->lightMap[index + offset[side]] = currentLight - 1;
+    //                 lightNodes.push(index + offset[side]);
+    //             }
+    //         }
+    //         else { /* we're on a chunk border */
+    //             // std::cout << currentLight << std::endl;
+    //             // neighbouringChunks[side][ (index + (paddedSize.x - x * 2)) - offset[side] ]
+    //             int value = this->lightMap[index + offset[side]];
+                
+    //             if (neighbouringChunks[side] != nullptr && side != 2 && side != 3)
+    //                 value = std::max(value, (int)neighbouringChunks[side][ (index + offsetInv[side]) - offset[side] ]);
+
+    //             if (this->texture[index + offset[side]] == 0 && value + 2 <= currentLight) {
+    //                 this->lightMap[index + offset[side]] = currentLight - 1;
+    //                 lightNodes.push(index + offset[side]);
+    //             }
+    //         }
+    //     }
     // }
     this->lighted = true;
 }
+
+        // if (this->texture[index + 1] == 0 && this->lightMap[index + 1] + 2 <= currentLight) { /* right */
+        //     this->lightMap[index + 1] = currentLight - 1;
+        //     lightNodes.push(index + 1);
+        // }
+        // if (this->texture[index - 1] == 0 && this->lightMap[index - 1] + 2 <= currentLight) { /* left */
+        //     this->lightMap[index - 1] = currentLight - 1;
+        //     lightNodes.push(index - 1);
+        // }
+        // if (this->texture[index + paddedSize.x] == 0 && this->lightMap[index + paddedSize.x] + 2 <= currentLight) { /* front */
+        //     this->lightMap[index + paddedSize.x] = currentLight - 1;
+        //     lightNodes.push(index + paddedSize.x);
+        // }
+        // if (this->texture[index - paddedSize.x] == 0 && this->lightMap[index - paddedSize.x] + 2 <= currentLight) { /* back */
+        //     this->lightMap[index - paddedSize.x] = currentLight - 1;
+        //     lightNodes.push(index - paddedSize.x);
+        // }
+        // if (this->texture[index + this->y_step] == 0 && this->lightMap[index + this->y_step] + 2 <= currentLight) { /* right */
+        //     this->lightMap[index + this->y_step] = currentLight - 1;
+        //     lightNodes.push(index + this->y_step);
+        // }
+        // if (this->texture[index - this->y_step] == 0 && this->lightMap[index - this->y_step] + 2 <= currentLight) { /* right */
+        //     this->lightMap[index - this->y_step] = currentLight - 1;
+        //     lightNodes.push(index - this->y_step);
+        // }
 
 void    Chunk::render( Shader shader, Camera& camera, GLuint textureAtlas, uint renderDistance ) {
     if (glm::distance(this->position * glm::vec3(1,0,1), camera.getPosition() * glm::vec3(1,0,1)) > renderDistance * 1.5) {

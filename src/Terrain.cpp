@@ -159,8 +159,16 @@ void    Terrain::computeChunkLight( void ) {
     for (auto it = this->chunks.begin(); it != this->chunks.end(); ++it) {
         if (!it->second->isLighted()) {
             /* the lightMask is the last vertical slice of the LightMap of previous chunk (must compute it) */
+            std::array<const uint8_t*, 6> neighbouringChunks = {
+                (chunks.find({it->first.p + glm::vec3(1,0,0)}) != chunks.end() ? chunks[{it->first.p + glm::vec3(1,0,0)}]->getLightMap() : nullptr),
+                (chunks.find({it->first.p - glm::vec3(1,0,0)}) != chunks.end() ? chunks[{it->first.p - glm::vec3(1,0,0)}]->getLightMap() : nullptr),
+                (chunks.find({it->first.p + glm::vec3(0,1,0)}) != chunks.end() ? chunks[{it->first.p + glm::vec3(0,1,0)}]->getLightMap() : nullptr),
+                (chunks.find({it->first.p - glm::vec3(0,1,0)}) != chunks.end() ? chunks[{it->first.p - glm::vec3(0,1,0)}]->getLightMap() : nullptr),
+                (chunks.find({it->first.p + glm::vec3(0,0,1)}) != chunks.end() ? chunks[{it->first.p + glm::vec3(0,0,1)}]->getLightMap() : nullptr),
+                (chunks.find({it->first.p - glm::vec3(0,0,1)}) != chunks.end() ? chunks[{it->first.p - glm::vec3(0,0,1)}]->getLightMap() : nullptr)
+            };
             const uint8_t* aboveLightMask = (chunks.find({it->first.p + glm::vec3(0,1,0)}) != chunks.end() ? chunks[{it->first.p + glm::vec3(0,1,0)}]->getLightMask() : nullptr);
-            it->second->computeLight(aboveLightMask);
+            it->second->computeLight(neighbouringChunks, aboveLightMask);
         }
     }
 }
