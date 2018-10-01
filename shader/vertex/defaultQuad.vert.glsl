@@ -1,16 +1,16 @@
 #version 400 core
 layout (location = 0) in vec3 aPos;
-layout (location = 1) in ivec2 aAo;
+layout (location = 1) in vec3 aNormal;
 layout (location = 2) in int aId;
-layout (location = 3) in int aVisibleFaces;
-layout (location = 4) in int aLight;
+layout (location = 3) in int aFaceId;
+layout (location = 4) in ivec2 aAo;
 
 out mat4 mvp;
 out vec3 gFragPos;
-flat out ivec2 gAo;
+flat out vec3 gNormal;
 flat out int gId;
-flat out int gVisibleFaces;
-flat out int gLight;
+flat out int gFaceId;
+flat out ivec2 gAo;
 
 uniform mat4 _model;
 uniform mat4 _mvp;
@@ -18,9 +18,9 @@ uniform mat4 _mvp;
 void main() {
     gl_Position = _mvp * vec4(aPos, 1.0);
     mvp = _mvp;
-    gAo = aAo;
     gId = aId;
-    gVisibleFaces = aVisibleFaces;
-    gLight = aLight;
+    gFaceId = aFaceId;
+    gAo = aAo;
+    gNormal = aNormal;
     gFragPos = vec3(_model * vec4(aPos, 1.0));
 }

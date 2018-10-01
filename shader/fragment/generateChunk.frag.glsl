@@ -69,6 +69,7 @@ float   fbm3d(in vec3 st, in float amplitude, in float frequency, in int octaves
 //     return m_dist;
 // }
 
+#define AIR 0.
 #define DIRT 1/255.
 #define GRASS 2/255.
 #define STONE 3/255.
@@ -91,8 +92,9 @@ float   map(vec3 p) {
     if (p.y == 0 || fbm3d(p, 1.0, 20.0, 2, 1.5, 0.5) > p.y/3.)
         return BEDROCK;
     /* terrain and caves */
-    int g0 = int(fbm3d(p, 0.5, 0.01, 6, 1.7, 0.5) > p.y / 255.);           /*  low-frequency landscape */
-    int g1 = int(fbm3d(p, 0.5, 0.025, 4, 1.5, 0.5) > 0.45 * (p.y / 128.)); /* high-frequency landscape */
+    int g0 = int(fbm3d(p, 0.5, 0.008, 6, 1.7, 0.5) > p.y / 255.); /*  low-frequency landscape */
+    int g1 = int(fbm3d(p, 0.5, 0.025, 4, 1.5, 0.5) > p.y / 255.); /* high-frequency landscape */
+
     // int g2 = int( (1-abs( fbm3d(vec3(p.x-5,  p.y, p.z + 21.), 0.5, 0.03, 5, 1.9, 0.48) * 2.-1.)) * 
                 //   (1-abs( fbm3d(vec3(p.z, p.y+4., p.x - 42.), 0.5, 0.03, 5, 1.9, 0.48) * 2.-1.)) < 0.9);
     // int g2 = int( (1-abs( fbm3d(vec3(p.x-5,  p.y, p.z + 21.), 0.48, 0.033, 6, 1.7, 0.48) * 2.-1.)) * 
@@ -110,16 +112,19 @@ float   map(vec3 p) {
     int g12= int(fbm3d(p-160., 0.45, 0.35, 3, 0.2, 0.30) < 0.1 && p.y < 16); /* redstone */
     int g5 = int(fbm3d(p+100., 0.45, 0.20, 3, 1.5, 0.38) < 0.1 && p.y < 16); /* diamond */
     /* stone (we use the same values for fbm as landscape but with a vertical offset) */
-    int g7 = int(fbm3d(p+vec3(0,20,0), 0.5, 0.01, 5, 1.7, 0.5) > p.y / 255.);        /*  low-frequency landscape */
-    g7 &= int(fbm3d(p+vec3(0,20,0), 0.5, 0.025, 3, 1.5, 0.5) > 0.45 * (p.y / 128.)); /* high-frequency landscape */
-    g7 &= int(fbm3d(p+vec3(0,5,0), 0.5, 0.01, 5, 1.7, 0.5) > p.y / 255.);            /*  low-frequency landscape */
-    g7 &= int(fbm3d(p+vec3(0,5,0), 0.5, 0.025, 3, 1.5, 0.5) > 0.45 * (p.y / 128.));  /* high-frequency landscape */
+    int g7 = int(fbm3d(p+vec3(0,20,0), 0.5, 0.008, 5, 1.7, 0.5) > p.y / 255.); /*  low-frequency landscape */
+    g7 &= int(fbm3d(p+vec3(0,20,0), 0.5, 0.025, 3, 1.5, 0.5) > p.y / 255.);    /* high-frequency landscape */
+    g7 &= int(fbm3d(p+vec3(0,5,0), 0.5, 0.008, 5, 1.7, 0.5) > p.y / 255.);     /*  low-frequency landscape */
+    g7 &= int(fbm3d(p+vec3(0,5,0), 0.5, 0.025, 3, 1.5, 0.5) > p.y / 255.);     /* high-frequency landscape */
     /* pockets of dirt and gravel in undergrounds */
     int g8 = int(abs(fbm3d(p+40, 0.32, 0.11, 3, 1.0, 0.5)*2.-1.) < 0.05 + (1.0-p.y/96.)*0.05);
     int g9 = int(fbm3d(p-70, 0.45, 0.14, 3, 1.0, 0.2) < 0.05 + (1.0-p.y/200.)*0.05);
     /* trees */
     // int g14= int(fbm2d(p.xz, 0.25, 0.01, 4, 2.7, 0.2) < 0.5);
     //    g14&= int(fbm2d(p.xz, 0.47, 0.25, 4, 2.5, 0.1) < 0.5);
+
+    /* water source */
+    int g15= int(fbm3d(p, 0.2, 0.009, 4, 0.0, 0.7) < p.y / 196.);
 
     res = float(g0 & g1 & g2 & g13) * DIRT;
 
@@ -133,6 +138,7 @@ float   map(vec3 p) {
     res = (res == STONE && g8 == 1 ? DIRT : res );
     res = (res == STONE && g9 == 1 ? GRAVEL : res );
     // res = (res == DIRT && g14 == 0 ? OAK_WOOD : res);
+    res = (res == AIR && g5 == 1 ? SAND : res );
 
     // res = (g2) * COAL; // tmp
     // res = g9 * GRAVEL; // tmp
@@ -152,7 +158,7 @@ void    main() {
         FragColor.r = sqrt(map(worldPos)); // values from [0..255] (0..1) are in normalized fixed-point representation, a simple sqrt() fixes that.
     }
     else /* border value (255) */
-        FragColor.r = sqrt(1.0);
+        FragColor.r = 1.0;
 
     // FragColor.r = sqrt(int(sin(worldPos.y/16.+0.5*PI)*sin(worldPos.x/16.+0.5*PI)*0.5+0.5 < worldPos.z/32.) * STONE); // Z
     // FragColor.r = sqrt(int(sin(worldPos.y/16.+0.5*PI)*sin(worldPos.z/16.+0.5*PI)*0.5+0.5 < worldPos.x/32.) * STONE); // X

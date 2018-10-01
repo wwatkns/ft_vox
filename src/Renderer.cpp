@@ -40,8 +40,8 @@ void	Renderer::loop( void ) {
             glBindFramebuffer(GL_FRAMEBUFFER, this->framebuffer.fbo);
             glClear(GL_DEPTH_BUFFER_BIT);
             this->renderLights();
-            this->renderMeshes();
             this->renderSkybox();
+            this->renderMeshes();
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             this->renderPostFxaa();
@@ -55,7 +55,6 @@ void	Renderer::loop( void ) {
             this->renderMeshes();
             this->renderSkybox();
         }
-
         glfwSwapBuffers(this->env->getWindow().ptr);
         /* display framerate */
         tTimePoint current = std::chrono::steady_clock::now();

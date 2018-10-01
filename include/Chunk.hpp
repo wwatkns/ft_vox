@@ -71,9 +71,9 @@ private:
 
     void                setup( int mode );
     void                createModelTransform( const glm::vec3& position );
-    bool                isVoxelCulled( int i );
-    uint8_t             getVisibleFaces( int i );
-    glm::ivec2          getVerticesAoValue( int i, uint8_t visibleFaces );
+    const bool          isVoxelCulled( int i ) const;
+    const uint8_t       getVisibleFaces( int i ) const;
+    glm::ivec2          getVerticesAoValue( int i, uint8_t visibleFaces ) const;
 
 };
 

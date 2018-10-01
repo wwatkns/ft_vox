@@ -15,6 +15,8 @@
 #include <forward_list>
 #include <unordered_map>
 #include <map>
+#include <queue>
+#include <set>
 
 #include "Exception.hpp"
 #include "Shader.hpp"
@@ -60,16 +62,11 @@ struct KeyHash {
     }
 };
 
-struct vec3Comp {
-    bool operator() (const glm::vec3& lhs, const glm::vec3& rhs) const {
-        return (lhs.y > rhs.y && lhs.x > rhs.x && lhs.z > rhs.z);
-    }
-};
 
 class Terrain {
 
 public:
-    Terrain( uint renderDistance = 160, uint maxHeight = 256, const glm::ivec3& chunkSize = glm::ivec3(32, 32, 32) );
+    Terrain( uint renderDistance = 160, uint maxHeight = 256 );
     ~Terrain( void );
 
     void                        updateChunks( const glm::vec3& cameraPosition );
@@ -84,7 +81,8 @@ public:
 
 private:
     std::unordered_map<Key, Chunk*, KeyHash>    chunks;
-    std::map<glm::vec3, bool, vec3Comp>         chunksToGenerate; /* we need a map to be able to generate the chunks in order from top to bottom */
+    // std::unordered_map<glm::vec3, vec3Comp>     chunksToGenerate; /* we need a map to be able to generate the chunks in order from top to bottom */
+    // std::priority_queue<uint64_t>       chunksToGenerate; /* we need a map to be able to generate the chunks in order from top to bottom */
     int                                         maxChunksGeneratedPerFrame;
     glm::ivec3                  chunkSize;
     uint                        renderDistance; /* in blocs */

@@ -4,57 +4,49 @@
 Chunk::Chunk( const glm::vec3& position, const glm::ivec3& chunkSize, const uint8_t* texture, const uint margin ) : position(position), chunkSize(chunkSize), margin(margin), meshed(false), lighted(false), underground(false), outOfRange(false) {
     this->createModelTransform(position);
     this->paddedSize = chunkSize + static_cast<int>(margin);
-    this->texture = static_cast<uint8_t*>(malloc(sizeof(uint8_t) * paddedSize.x * paddedSize.y * paddedSize.z));
-    memcpy(this->texture, texture, paddedSize.x * paddedSize.y * paddedSize.z);
     this->y_step = paddedSize.x * paddedSize.z;
 
+    this->texture = static_cast<uint8_t*>(malloc(sizeof(uint8_t) * paddedSize.x * paddedSize.y * paddedSize.z));
+    memcpy(this->texture, texture, paddedSize.x * paddedSize.y * paddedSize.z);
     /* the light-mask is only a horizontal slice containing information about wether the sky is seen from this vertical position */
-    // this->lightMask = static_cast<uint8_t*>(malloc(sizeof(uint8_t) * chunkSize.x * chunkSize.z));
-    // memset(this->lightMask, 15, chunkSize.x * chunkSize.z);
     this->lightMask = static_cast<uint8_t*>(malloc(sizeof(uint8_t) * paddedSize.x * paddedSize.z));
     memset(this->lightMask, 15, paddedSize.x * paddedSize.z);
-
-    // NEW
+    /* the light-map is the voxels light values in the chunk */
     this->lightMap = static_cast<uint8_t*>(malloc(sizeof(uint8_t) * paddedSize.x * paddedSize.y * paddedSize.z));
     memset(this->lightMap, 0, paddedSize.x * paddedSize.y * paddedSize.z);
 }
 
 Chunk::~Chunk( void ) {
+    this->voxels.clear();
     free(this->texture);
-    this->texture = NULL;
+    this->texture = nullptr;
     free(this->lightMask);
-    this->lightMask = NULL;
+    this->lightMask = nullptr;
+    free(this->lightMap);
+    this->lightMap = nullptr;
     glDeleteBuffers(1, &this->vao);
     glDeleteBuffers(1, &this->vbo);
 }
 
-uint8_t Chunk::getVisibleFaces( int i ) {
-    uint8_t faces = 0x0;
-    faces |=  (this->texture[i + 1           ] == 0) << 5; // right
-    faces |=  (this->texture[i - 1           ] == 0) << 4; // left
-    faces |=  (this->texture[i + paddedSize.x] == 0) << 3; // front
-    faces |=  (this->texture[i - paddedSize.x] == 0) << 2; // back
-    faces |=  (this->texture[i + this->y_step] == 0) << 1; // top
-    faces |=  (this->texture[i - this->y_step] == 0) << 0; // bottom
-    return faces;
+const uint8_t Chunk::getVisibleFaces( int i ) const {
+    return ((this->texture[i + 1           ] == 0) << 5) | // right
+           ((this->texture[i - 1           ] == 0) << 4) | // left
+           ((this->texture[i + paddedSize.x] == 0) << 3) | // front
+           ((this->texture[i - paddedSize.x] == 0) << 2) | // back
+           ((this->texture[i + this->y_step] == 0) << 1) | // top
+           ((this->texture[i - this->y_step] == 0) << 0);  // bottom
 }
 
-bool    Chunk::isVoxelCulled( int i ) {
-    uint8_t b = 0x1;
-    b &= (this->texture[i + 1           ] != 0); // right
-    b &= (this->texture[i - 1           ] != 0); // left
-    b &= (this->texture[i + paddedSize.x] != 0); // front
-    b &= (this->texture[i - paddedSize.x] != 0); // back
-    b &= (this->texture[i + this->y_step] != 0); // top
-    b &= (this->texture[i - this->y_step] != 0); // bottom
-    return b;
+const bool    Chunk::isVoxelCulled( int i ) const {
+    return (this->texture[i + 1           ] != 0) & // right
+           (this->texture[i - 1           ] != 0) & // left
+           (this->texture[i + paddedSize.x] != 0) & // front
+           (this->texture[i - paddedSize.x] != 0) & // back
+           (this->texture[i + this->y_step] != 0) & // top
+           (this->texture[i - this->y_step] != 0);  // bottom
 }
 
-static int pow2( int x ) {
-    return x * x;
-}
-
-glm::ivec2  Chunk::getVerticesAoValue( int i, uint8_t visibleFaces ) {
+glm::ivec2  Chunk::getVerticesAoValue( int i, uint8_t visibleFaces ) const {
     const int x_step = 1;
     const int z_step = paddedSize.x;
     /* we have 20 voxels to check */
@@ -94,51 +86,52 @@ glm::ivec2  Chunk::getVerticesAoValue( int i, uint8_t visibleFaces ) {
     */
     std::array<int, 6> facesAo = { 0, 0, 0, 0, 0, 0 };
     if (visibleFaces & 0x20) { // [1, 0, 2, 3]
-        facesAo[0] = (static_cast<int>( std::min(p[10]*.75f + p[4] *.5f + p[3] *.75f, 1.5f) * 2) << 2) | // right:0
-                     (static_cast<int>( std::min(p[3] *.75f + p[2] *.5f + p[9] *.75f, 1.5f) * 2) << 0) | // right:1
-                     (static_cast<int>( std::min(p[9] *.75f + p[14]*.5f + p[15]*.75f, 1.5f) * 2) << 4) | // right:2
-                     (static_cast<int>( std::min(p[15]*.75f + p[16]*.5f + p[10]*.75f, 1.5f) * 2) << 6);  // right:3
+        facesAo[0] = (static_cast<int>( std::min(p[10]*1.5f + p[4]  + p[3] *1.5f, 3.0f)) << 2) | // right:0
+                     (static_cast<int>( std::min(p[3] *1.5f + p[2]  + p[9] *1.5f, 3.0f)) << 0) | // right:1
+                     (static_cast<int>( std::min(p[9] *1.5f + p[14] + p[15]*1.5f, 3.0f)) << 4) | // right:2
+                     (static_cast<int>( std::min(p[15]*1.5f + p[16] + p[10]*1.5f, 3.0f)) << 6);  // right:3
     }
     if (visibleFaces & 0x10) { // [2, 1, 3, 0]
-        facesAo[1] = (static_cast<int>( std::min(p[8] *.75f + p[0] *.5f + p[7] *.75f, 1.5f) * 2) << 6) | // left:0
-                     (static_cast<int>( std::min(p[7] *.75f + p[6] *.5f + p[11]*.75f, 1.5f) * 2) << 2) | // left:1
-                     (static_cast<int>( std::min(p[11]*.75f + p[18]*.5f + p[19]*.75f, 1.5f) * 2) << 0) | // left:2
-                     (static_cast<int>( std::min(p[19]*.75f + p[12]*.5f + p[8] *.75f, 1.5f) * 2) << 4);  // left:3
+        facesAo[1] = (static_cast<int>( std::min(p[8] *1.5f + p[0]  + p[7] *1.5f, 3.0f)) << 6) | // left:0
+                     (static_cast<int>( std::min(p[7] *1.5f + p[6]  + p[11]*1.5f, 3.0f)) << 2) | // left:1
+                     (static_cast<int>( std::min(p[11]*1.5f + p[18] + p[19]*1.5f, 3.0f)) << 0) | // left:2
+                     (static_cast<int>( std::min(p[19]*1.5f + p[12] + p[8] *1.5f, 3.0f)) << 4);  // left:3
     }
     if (visibleFaces & 0x08) { // [2, 1, 3, 0]
-        facesAo[2] = (static_cast<int>( std::min(p[11]*.75f + p[6] *.5f + p[5] *.75f, 1.5f) * 2) << 6) | // front:0
-                     (static_cast<int>( std::min(p[5] *.75f + p[4] *.5f + p[10]*.75f, 1.5f) * 2) << 2) | // front:1
-                     (static_cast<int>( std::min(p[10]*.75f + p[16]*.5f + p[17]*.75f, 1.5f) * 2) << 0) | // front:2
-                     (static_cast<int>( std::min(p[17]*.75f + p[18]*.5f + p[11]*.75f, 1.5f) * 2) << 4);  // front:3
+        facesAo[2] = (static_cast<int>( std::min(p[11]*1.5f + p[6]  + p[5] *1.5f, 3.0f)) << 6) | // front:0
+                     (static_cast<int>( std::min(p[5] *1.5f + p[4]  + p[10]*1.5f, 3.0f)) << 2) | // front:1
+                     (static_cast<int>( std::min(p[10]*1.5f + p[16] + p[17]*1.5f, 3.0f)) << 0) | // front:2
+                     (static_cast<int>( std::min(p[17]*1.5f + p[18] + p[11]*1.5f, 3.0f)) << 4);  // front:3
     }
     if (visibleFaces & 0x04) { // [1, 0, 2, 3]
-        facesAo[3] = (static_cast<int>( std::min(p[9] *.75f + p[2] *.5f + p[1] *.75f, 1.5f) * 2) << 2) | // back:0
-                     (static_cast<int>( std::min(p[1] *.75f + p[0] *.5f + p[8] *.75f, 1.5f) * 2) << 0) | // back:1
-                     (static_cast<int>( std::min(p[8] *.75f + p[12]*.5f + p[13]*.75f, 1.5f) * 2) << 4) | // back:2
-                     (static_cast<int>( std::min(p[13]*.75f + p[14]*.5f + p[9] *.75f, 1.5f) * 2) << 6);  // back:3
+        facesAo[3] = (static_cast<int>( std::min(p[9] *1.5f + p[2]  + p[1] *1.5f, 3.0f)) << 2) | // back:0
+                     (static_cast<int>( std::min(p[1] *1.5f + p[0]  + p[8] *1.5f, 3.0f)) << 0) | // back:1
+                     (static_cast<int>( std::min(p[8] *1.5f + p[12] + p[13]*1.5f, 3.0f)) << 4) | // back:2
+                     (static_cast<int>( std::min(p[13]*1.5f + p[14] + p[9] *1.5f, 3.0f)) << 6);  // back:3
     }
     if (visibleFaces & 0x02) { // [3, 2, 0, 1]
-        facesAo[4] = (static_cast<int>( std::min(p[7] *.75f + p[0] *.5f + p[1] *.75f, 1.5f) * 2) << 4) | // top:0
-                     (static_cast<int>( std::min(p[1] *.75f + p[2] *.5f + p[3] *.75f, 1.5f) * 2) << 6) | // top:1
-                     (static_cast<int>( std::min(p[3] *.75f + p[4] *.5f + p[5] *.75f, 1.5f) * 2) << 2) | // top:2
-                     (static_cast<int>( std::min(p[5] *.75f + p[6] *.5f + p[7] *.75f, 1.5f) * 2) << 0);  // top:3
+        facesAo[4] = (static_cast<int>( std::min(p[7] *1.5f + p[0]  + p[1] *1.5f, 3.0f)) << 4) | // top:0
+                     (static_cast<int>( std::min(p[1] *1.5f + p[2]  + p[3] *1.5f, 3.0f)) << 6) | // top:1
+                     (static_cast<int>( std::min(p[3] *1.5f + p[4]  + p[5] *1.5f, 3.0f)) << 2) | // top:2
+                     (static_cast<int>( std::min(p[5] *1.5f + p[6]  + p[7] *1.5f, 3.0f)) << 0);  // top:3
     }
     if (visibleFaces & 0x01) { // [1, 2, 0, 3]
-        facesAo[5] = (static_cast<int>( std::min(p[19]*.75f + p[12]*.5f + p[13]*.75f, 1.5f) * 2) << 4) | // bottom:0
-                     (static_cast<int>( std::min(p[13]*.75f + p[14]*.5f + p[15]*.75f, 1.5f) * 2) << 0) | // bottom:1
-                     (static_cast<int>( std::min(p[15]*.75f + p[16]*.5f + p[17]*.75f, 1.5f) * 2) << 2) | // bottom:2
-                     (static_cast<int>( std::min(p[17]*.75f + p[18]*.5f + p[19]*.75f, 1.5f) * 2) << 6);  // bottom:3
+        facesAo[5] = (static_cast<int>( std::min(p[19]*1.5f + p[12] + p[13]*1.5f, 3.0f)) << 4) | // bottom:0
+                     (static_cast<int>( std::min(p[13]*1.5f + p[14] + p[15]*1.5f, 3.0f)) << 0) | // bottom:1
+                     (static_cast<int>( std::min(p[15]*1.5f + p[16] + p[17]*1.5f, 3.0f)) << 2) | // bottom:2
+                     (static_cast<int>( std::min(p[17]*1.5f + p[18] + p[19]*1.5f, 3.0f)) << 6);  // bottom:3
     }
+    auto pow2 = [](int x) { return x * x; };
     /* we check the vertices ao values to determine if the quad must be flipped, and we pack it in ao.y at 0x00FF0000 */
     uint8_t flippedQuads = 0x0;
     for (int i = 0; i < 6; i++) {
         if (visibleFaces & (0x20 >> i))
             flippedQuads |= (int)(pow2((facesAo[i]&0x30)>>4) + pow2((facesAo[i]&0x0C)>>2) > pow2((facesAo[i]&0xC0)>>6) + pow2((facesAo[i]&0x03)>>0)) << (5-i);
     }
-    glm::ivec2  ao = glm::ivec2(0, 0);
-    ao.x = (facesAo[0] << 24) | (facesAo[1] << 16) | (facesAo[2] << 8) | (facesAo[3]);
-    ao.y = (flippedQuads << 16) | (facesAo[4] <<  8) | (facesAo[5]);
-    return ao;
+    return glm::ivec2(
+        (facesAo[0] << 24) | (facesAo[1] << 16) | (facesAo[2] << 8) | (facesAo[3]),
+        (flippedQuads << 16) | (facesAo[4] <<  8) | (facesAo[5])
+    );
 }
 
 void    Chunk::buildMesh( void ) {
@@ -154,8 +147,7 @@ void    Chunk::buildMesh( void ) {
                     uint8_t visibleFaces = getVisibleFaces(i);
                     uint8_t b = static_cast<uint8_t>(this->texture[i] - 1);
                     /* change dirt to grass on top */
-                    // if (texture[i] == 1 && texture[i + this->y_step] == 0 && lightMap[i + this->y_step] > 2)
-                    if (texture[i] == 1 && texture[i + this->y_step] == 0 && !this->underground)
+                    if (texture[i] == 1 && texture[i + this->y_step] == 0 && !this->underground) // && lightMap[i + this->y_step] > 2)
                         b = 1;
                     glm::ivec2 ao = getVerticesAoValue(i, visibleFaces);
                     int light = ((int)lightMap[i + 1           ] << 20) | ((int)lightMap[i - 1           ] << 16) |
@@ -167,11 +159,6 @@ void    Chunk::buildMesh( void ) {
     this->setup(GL_STATIC_DRAW);
     this->meshed = true;
 }
-
-// void    Chunk::getNeighbouringLightLevel( void ) {
-
-// }
-
 /*
     +---+---+---+---++---+---+---+---+
     | 15| 15|###|###|| 15|###|###|###|
@@ -233,7 +220,7 @@ const bool  Chunk::isMaskZero( const uint8_t* mask ) {
 
 void    Chunk::computeLight( std::array<const uint8_t*, 6> neighbouringChunks, const uint8_t* aboveLightMask ) {
     const int m = this->margin / 2;
-    std::queue<int>   lightNodes;
+    // std::queue<int>   lightNodes;
 
     if (aboveLightMask != nullptr) { // the lightMask of the chunk above
         memcpy(lightMask, aboveLightMask, this->y_step); // copies the mask as current lightMask
@@ -251,9 +238,9 @@ void    Chunk::computeLight( std::array<const uint8_t*, 6> neighbouringChunks, c
                 int i = j + (y+m) * this->y_step;
                 if (this->texture[i] == 0 && (this->lightMask[j] == 15) ) { /* if voxel is transparent, and voxel above also */
                     lightMask[j] = 15;
-                    lightNodes.push(i); /* optimization idea: add node only if 1 or more neighbouring voxel light is 0 (but transparent) */
+                    // lightNodes.push(i); /* optimization idea: add node only if 1 or more neighbouring voxel light is 0 (but transparent) */
                 }
-                if (this->texture[i] != 0) /* if voxel is opaque */
+                else if (this->texture[i] != 0) /* if voxel is opaque */
                     lightMask[j] = 0;
                 lightMap[i] = lightMask[j];
             }
@@ -294,35 +281,12 @@ void    Chunk::computeLight( std::array<const uint8_t*, 6> neighbouringChunks, c
     this->lighted = true;
 }
 
-        // if (this->texture[index + 1] == 0 && this->lightMap[index + 1] + 2 <= currentLight) { /* right */
-        //     this->lightMap[index + 1] = currentLight - 1;
-        //     lightNodes.push(index + 1);
-        // }
-        // if (this->texture[index - 1] == 0 && this->lightMap[index - 1] + 2 <= currentLight) { /* left */
-        //     this->lightMap[index - 1] = currentLight - 1;
-        //     lightNodes.push(index - 1);
-        // }
-        // if (this->texture[index + paddedSize.x] == 0 && this->lightMap[index + paddedSize.x] + 2 <= currentLight) { /* front */
-        //     this->lightMap[index + paddedSize.x] = currentLight - 1;
-        //     lightNodes.push(index + paddedSize.x);
-        // }
-        // if (this->texture[index - paddedSize.x] == 0 && this->lightMap[index - paddedSize.x] + 2 <= currentLight) { /* back */
-        //     this->lightMap[index - paddedSize.x] = currentLight - 1;
-        //     lightNodes.push(index - paddedSize.x);
-        // }
-        // if (this->texture[index + this->y_step] == 0 && this->lightMap[index + this->y_step] + 2 <= currentLight) { /* right */
-        //     this->lightMap[index + this->y_step] = currentLight - 1;
-        //     lightNodes.push(index + this->y_step);
-        // }
-        // if (this->texture[index - this->y_step] == 0 && this->lightMap[index - this->y_step] + 2 <= currentLight) { /* right */
-        //     this->lightMap[index - this->y_step] = currentLight - 1;
-        //     lightNodes.push(index - this->y_step);
-        // }
-
 void    Chunk::render( Shader shader, Camera& camera, GLuint textureAtlas, uint renderDistance ) {
-    if (glm::distance(this->position * glm::vec3(1,0,1), camera.getPosition() * glm::vec3(1,0,1)) > renderDistance * 1.5) {
+    if (glm::distance(this->position * glm::vec3(1,0,1), camera.getPosition() * glm::vec3(1,0,1)) > renderDistance * 3.0f) {
         outOfRange = true;
         return;
+    } else {
+        outOfRange = false;
     }
     glm::vec3 size = this->chunkSize;
     if (camera.aabInFustrum(-(this->position + size / 2), size) && this->voxels.size() > 0 && this->texture) {
