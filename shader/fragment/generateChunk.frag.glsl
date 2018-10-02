@@ -84,6 +84,7 @@ float   fbm3d(in vec3 st, in float amplitude, in float frequency, in int octaves
 #define SAND 12/255.
 #define OAK_WOOD 13/255.
 #define OAK_LEAVES 14/255.
+#define WATER 15/255.
 
 float   map(vec3 p) {
     /* TODO : implement biomes with voronoi cells */
@@ -127,7 +128,8 @@ float   map(vec3 p) {
     //    g14&= int(fbm2d(p.xz, 0.47, 0.25, 4, 2.5, 0.1) < 0.5);
 
     /* water source */
-    int g15= int(fbm3d(p, 0.2, 0.009, 4, 0.0, 0.7) < p.y / 196.);
+    // int g15= int(fbm3d(p, 0.2, 0.009, 4, 0.0, 0.7) > 0.5);
+    int g15= int(fbm3d(p, 0.055, 0.05, 4, 2.0, 1.5) > (p.y/255.)  );//p.y / 340.);
 
     res = float(g0 & g1 & g2 & g13) * DIRT;
 
@@ -141,7 +143,7 @@ float   map(vec3 p) {
     res = (res == STONE &&  g8 == 1 ? DIRT : res );
     res = (res == STONE &&  g9 == 1 ? GRAVEL : res );
     // res = (res == DIRT && g14 == 0 ? OAK_WOOD : res);
-    res = (res == AIR && g5 == 1 ? SAND : res );
+    res = (res == AIR && g15 == 1 ? WATER : res );
 
     // res = (g2) * COAL; // tmp
     // res = g9 * GRAVEL; // tmp

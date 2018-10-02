@@ -34,12 +34,12 @@ public:
     ~Chunk( void );
 
     void                buildMesh( void );
+
+    void                computeWater( std::array<Chunk*, 6> neighbouringChunks ); // TMP
     void                computeLight( std::array<Chunk*, 6> neighbouringChunks, const uint8_t* aboveLightMask, bool intermediary = false );
     // void                computeLight( std::array<const uint8_t*, 6> neighbouringChunks, const uint8_t* aboveLightMask );
     void                render( Shader shader, Camera& camera, GLuint textureAtlas, uint renderDistance );
     /* getters */
-    const GLuint&       getVao( void ) const { return vao; };
-    const GLuint&       getVbo( void ) const { return vbo; };
     const glm::vec3&    getPosition( void ) const { return position; };
     const uint8_t*      getTexture( void ) const { return texture; };
     const uint8_t*      getLightMask( void ) const { return lightMask; };
@@ -52,10 +52,17 @@ public:
     const bool          isBorder( int i );
     const bool          isMaskZero( const uint8_t* mask );
 
+    const int           getBorderId( int i );
+
 private:
-    GLuint              vao;        // Vertex Array Object
-    GLuint              vbo;        // Vertex Buffer Object
-    std::vector<tPoint> voxels;     // the list of voxels created in Terrain
+    GLuint              vaoOpaqueMesh;        // Vertex Array Object
+    GLuint              vboOpaqueMesh;        // Vertex Buffer Object
+    GLuint              vaoTransparentMesh;   // Vertex Array Object
+    GLuint              vboTransparentMesh;   // Vertex Buffer Object
+
+    std::vector<tPoint> voxelsOpaque;      // the list of opaque voxels created in Terrain
+    std::vector<tPoint> voxelsTransparent; // the list of transparent voxels created in Terrain
+
     glm::mat4           transform;  // the transform of the chunk (its world position)
     glm::vec3           position;
     glm::ivec3          chunkSize;  /* the chunk size */
@@ -70,10 +77,15 @@ private:
     bool                outOfRange;
     int                 y_step;
 
-    void                setup( int mode );
+    void                setupMeshOpaque( int mode );
+    void                setupMeshTransparent( int mode );
+
     void                createModelTransform( const glm::vec3& position );
+    const bool          isVoxelTransparent( int i ) const;
     const bool          isVoxelCulled( int i ) const;
+    const bool          isVoxelCulledTransparent( int i ) const;
     const uint8_t       getVisibleFaces( int i ) const;
+    const uint8_t       getVisibleFacesTransparent( int i ) const;
     glm::ivec2          getVerticesAoValue( int i, uint8_t visibleFaces ) const;
 
 };

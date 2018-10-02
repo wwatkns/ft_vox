@@ -17,18 +17,43 @@ Chunk::Chunk( const glm::vec3& position, const glm::ivec3& chunkSize, const uint
 }
 
 Chunk::~Chunk( void ) {
-    this->voxels.clear();
+    this->voxelsOpaque.clear();
+    this->voxelsTransparent.clear();
     free(this->texture);
     this->texture = nullptr;
     free(this->lightMask);
     this->lightMask = nullptr;
     free(this->lightMap);
     this->lightMap = nullptr;
-    glDeleteBuffers(1, &this->vao);
-    glDeleteBuffers(1, &this->vbo);
+    glDeleteBuffers(1, &this->vaoOpaqueMesh);
+    glDeleteBuffers(1, &this->vboOpaqueMesh);
+    glDeleteBuffers(1, &this->vaoTransparentMesh);
+    glDeleteBuffers(1, &this->vboTransparentMesh);
+}
+
+const bool  Chunk::isVoxelTransparent( int i ) const {
+    return (this->texture[i] == 0 || this->texture[i] == 15);
 }
 
 const uint8_t Chunk::getVisibleFaces( int i ) const {
+    return (isVoxelTransparent(i + 1           ) << 5) | // right
+           (isVoxelTransparent(i - 1           ) << 4) | // left
+           (isVoxelTransparent(i + paddedSize.x) << 3) | // front
+           (isVoxelTransparent(i - paddedSize.x) << 2) | // back
+           (isVoxelTransparent(i + this->y_step) << 1) | // top
+           (isVoxelTransparent(i - this->y_step) << 0);  // bottom
+}
+
+const bool    Chunk::isVoxelCulled( int i ) const {
+    return (isVoxelTransparent(i + 1           ) == false) & // right
+           (isVoxelTransparent(i - 1           ) == false) & // left
+           (isVoxelTransparent(i + paddedSize.x) == false) & // front
+           (isVoxelTransparent(i - paddedSize.x) == false) & // back
+           (isVoxelTransparent(i + this->y_step) == false) & // top
+           (isVoxelTransparent(i - this->y_step) == false);  // bottom
+}
+
+const uint8_t Chunk::getVisibleFacesTransparent( int i ) const {
     return ((this->texture[i + 1           ] == 0) << 5) | // right
            ((this->texture[i - 1           ] == 0) << 4) | // left
            ((this->texture[i + paddedSize.x] == 0) << 3) | // front
@@ -37,7 +62,7 @@ const uint8_t Chunk::getVisibleFaces( int i ) const {
            ((this->texture[i - this->y_step] == 0) << 0);  // bottom
 }
 
-const bool    Chunk::isVoxelCulled( int i ) const {
+const bool    Chunk::isVoxelCulledTransparent( int i ) const {
     return (this->texture[i + 1           ] != 0) & // right
            (this->texture[i - 1           ] != 0) & // left
            (this->texture[i + paddedSize.x] != 0) & // front
@@ -52,28 +77,28 @@ glm::ivec2  Chunk::getVerticesAoValue( int i, uint8_t visibleFaces ) const {
     /* we have 20 voxels to check */
     const std::array<int, 20> p = {
         /* top */
-        (this->texture[i - x_step - z_step + y_step] != 0), //    top:0, 0
-        (this->texture[i -          z_step + y_step] != 0), //    top:1, 1
-        (this->texture[i + x_step - z_step + y_step] != 0), //    top:2, 2
-        (this->texture[i + x_step +          y_step] != 0), //    top:3, 3
-        (this->texture[i + x_step + z_step + y_step] != 0), //    top:4, 4
-        (this->texture[i +          z_step + y_step] != 0), //    top:5, 5
-        (this->texture[i - x_step + z_step + y_step] != 0), //    top:6, 6
-        (this->texture[i - x_step +          y_step] != 0), //    top:7, 7
+        !isVoxelTransparent(i - x_step - z_step + y_step), //    top:0, 0
+        !isVoxelTransparent(i -          z_step + y_step), //    top:1, 1
+        !isVoxelTransparent(i + x_step - z_step + y_step), //    top:2, 2
+        !isVoxelTransparent(i + x_step +          y_step), //    top:3, 3
+        !isVoxelTransparent(i + x_step + z_step + y_step), //    top:4, 4
+        !isVoxelTransparent(i +          z_step + y_step), //    top:5, 5
+        !isVoxelTransparent(i - x_step + z_step + y_step), //    top:6, 6
+        !isVoxelTransparent(i - x_step +          y_step), //    top:7, 7
         /* middle */
-        (this->texture[i - x_step - z_step         ] != 0), // middle:0, 8
-        (this->texture[i + x_step - z_step         ] != 0), // middle:1, 9
-        (this->texture[i + x_step + z_step         ] != 0), // middle:2, 10
-        (this->texture[i - x_step + z_step         ] != 0), // middle:3, 11
+        !isVoxelTransparent(i - x_step - z_step         ), // middle:0, 8
+        !isVoxelTransparent(i + x_step - z_step         ), // middle:1, 9
+        !isVoxelTransparent(i + x_step + z_step         ), // middle:2, 10
+        !isVoxelTransparent(i - x_step + z_step         ), // middle:3, 11
         /* bottom */
-        (this->texture[i - x_step - z_step - y_step] != 0), // bottom:0, 12
-        (this->texture[i -          z_step - y_step] != 0), // bottom:1, 13
-        (this->texture[i + x_step - z_step - y_step] != 0), // bottom:2, 14
-        (this->texture[i + x_step -          y_step] != 0), // bottom:3, 15
-        (this->texture[i + x_step + z_step - y_step] != 0), // bottom:4, 16
-        (this->texture[i +          z_step - y_step] != 0), // bottom:5, 17
-        (this->texture[i - x_step + z_step - y_step] != 0), // bottom:6, 18
-        (this->texture[i - x_step -          y_step] != 0)  // bottom:7, 19
+        !isVoxelTransparent(i - x_step - z_step - y_step), // bottom:0, 12
+        !isVoxelTransparent(i -          z_step - y_step), // bottom:1, 13
+        !isVoxelTransparent(i + x_step - z_step - y_step), // bottom:2, 14
+        !isVoxelTransparent(i + x_step -          y_step), // bottom:3, 15
+        !isVoxelTransparent(i + x_step + z_step - y_step), // bottom:4, 16
+        !isVoxelTransparent(i +          z_step - y_step), // bottom:5, 17
+        !isVoxelTransparent(i - x_step + z_step - y_step), // bottom:6, 18
+        !isVoxelTransparent(i - x_step -          y_step)  // bottom:7, 19
     };
     /*      top                  middle                 bottom
     +-----+-----+-----+    +-----+/-/-/+-----+    +-----+-----+-----+
@@ -136,14 +161,14 @@ glm::ivec2  Chunk::getVerticesAoValue( int i, uint8_t visibleFaces ) const {
 
 void    Chunk::buildMesh( void ) {
     const int m = this->margin / 2;
-    this->voxels.reserve(chunkSize.x * chunkSize.y * chunkSize.z);
+    this->voxelsOpaque.reserve(chunkSize.x * chunkSize.y * chunkSize.z);
 
     for (int y = chunkSize.y-1; y >= 0; --y)
         for (int z = 0; z < chunkSize.z; ++z)
             for (int x = 0; x < chunkSize.x; ++x) {
                 int i = (x+m) + (z+m) * paddedSize.x + (y+m) * this->y_step;
                 int j = x + z * chunkSize.x + y * chunkSize.x * chunkSize.z;
-                if (this->texture[i] != 0 && !isVoxelCulled(i)) { /* if voxel is not air and not culled */
+                if (!isVoxelTransparent(i) && !isVoxelCulled(i)) { /* if voxel is not transparent and not culled */
                     uint8_t visibleFaces = getVisibleFaces(i);
                     uint8_t b = static_cast<uint8_t>(this->texture[i] - 1);
                     /* change dirt to grass on top */
@@ -153,49 +178,22 @@ void    Chunk::buildMesh( void ) {
                     int light = ((int)lightMap[i + 1           ] << 20) | ((int)lightMap[i - 1           ] << 16) |
                                 ((int)lightMap[i + paddedSize.x] << 12) | ((int)lightMap[i - paddedSize.x] <<  8) |
                                 ((int)lightMap[i + this->y_step] <<  4) | ((int)lightMap[i - this->y_step]);
-                    this->voxels.push_back( (tPoint){ glm::vec3(x, y, z), ao, b, visibleFaces, light } );
+                    this->voxelsOpaque.push_back( (tPoint){ glm::vec3(x, y, z), ao, b, visibleFaces, light } );
+                }
+                else if (this->texture[i] == 15 && !isVoxelCulledTransparent(i)) { /* if voxel is transparent but not air */
+                    uint8_t visibleFaces = 0x02;//getVisibleFacesTransparent(i);
+                    uint8_t b = static_cast<uint8_t>(this->texture[i] - 1);
+                    glm::ivec2 ao = getVerticesAoValue(i, visibleFaces);
+                    int light = ((int)lightMap[i + 1           ] << 20) | ((int)lightMap[i - 1           ] << 16) |
+                                ((int)lightMap[i + paddedSize.x] << 12) | ((int)lightMap[i - paddedSize.x] <<  8) |
+                                ((int)lightMap[i + this->y_step] <<  4) | ((int)lightMap[i - this->y_step]);
+                    this->voxelsTransparent.push_back( (tPoint){ glm::vec3(x, y, z), ao, b, visibleFaces, light } );
                 }
             }
-    this->setup(GL_STATIC_DRAW);
+    this->setupMeshOpaque(GL_STATIC_DRAW);
+    this->setupMeshTransparent(GL_STATIC_DRAW);
     this->meshed = true;
 }
-/*
-    +---+---+---+---++---+---+---+---+
-    | 15| 15|###|###|| 15|###|###|###|
-    +---+---+---+ - ++---+---+---+---+
-    | 15| 15|###| 12|| 15| 14| 13| 12|
-    +---+---+---+ - ++---+---+---+---+
-    | 15| 15| 14| 13||###|###| 12| 11|
-    +---+---+---+---++ - +---+---+---+
-    |###| 15| 14| 13|| 9 | 10| 11| 10|
-    +---+---+---+---++ - +---+---+---+
-    * The issue is that we must also update the chunk on the left when values of the right chunk have been
-      computed. It results in hard cut of shadows on one side, and smooth transition on the other...
-    * One way to solve that is to update them, though they are meshed, so we have to remesh them...
-    * Another solution could be to have a pass for all texture generation in chunksToLoad queue,
-      when that is done, we compute the light, and then we mesh all those chunks. We would still have to
-      remesh the chunks at borders of new batches, but the complexity is reduced a bit. (still, it's far from optimal)
-
-    +---+---+---+---++---+---+---+---+
-    | 15| 15|###|###|| 15|###|###|###|
-    +---+---+---+---++---+---+---+---+
-    | 15| 15|###| 14|| 15| 14| 13| 12|
-    +---+---+---+---++---+---+---+---+
-    | 15| 15| 14| 13||###|###| 12| 11|
-    +---+---+---+---++---+---+---+---+
-    |###| 15| 14| 13|| 12| 11| 11| 10|
-    +---+---+---+---++---+---+---+---+
-
-    +---+---+---+---++---+---+---+---+
-    | 15| 15|###|###|| 5 |###|###| 10|
-    +---+---+---+---++---+---+---+---+
-    | 15| 15|###| 12|| 6 | 7 | 8 | 9 |
-    +---+---+---+---++---+---+---+---+
-    | 15| 15| 14| 13||###|###| 7 | 8 |
-    +---+---+---+---++---+---+---+---+
-    |###| 15| 14| 13|| 4 | 5 | 6 | 7 |
-    +---+---+---+---++---+---+---+---+
-*/
 
 const bool  Chunk::isBorder( int i ) {
     const int m = this->margin / 2;
@@ -205,6 +203,23 @@ const bool  Chunk::isBorder( int i ) {
             i % this->y_step >= this->y_step - paddedSize.x * m || /* front border */
             i % (this->y_step * paddedSize.y) < this->y_step * m || /* top border */
             i % (this->y_step * paddedSize.y) >= this->y_step * paddedSize.y - this->y_step * m); /* bottom border */
+}
+
+const int   Chunk::getBorderId( int i ) {
+    const int m = this->margin / 2;
+    if (i % paddedSize.x < m) /* left border */
+        return 1;
+    if (i % paddedSize.x >= chunkSize.x + m) /* right border */
+        return 0;
+    if (i % this->y_step < paddedSize.x * m) /* back border */
+        return 5;
+    if (i % this->y_step >= this->y_step - paddedSize.x * m) /* front border */
+        return 4;
+    if (i % (this->y_step * paddedSize.y) < this->y_step * m) /* top border */
+        return 3;
+    if (i % (this->y_step * paddedSize.y) >= this->y_step * paddedSize.y - this->y_step * m) /* bottom border */
+        return 2;
+    return 6;
 }
 
 const bool  Chunk::isMaskZero( const uint8_t* mask ) {
@@ -236,11 +251,11 @@ void    Chunk::computeLight( std::array<Chunk*, 6> neighbouringChunks, const uin
             for (int x = -1; x < chunkSize.x+1; ++x) {
                 int j = (x+m) + (z+m) * paddedSize.x;
                 int i = j + (y+m) * this->y_step;
-                if (this->texture[i] == 0 && (this->lightMask[j] == 15) ) { /* if voxel is transparent, and voxel above also */
+                if (isVoxelTransparent(i) && (this->lightMask[j] == 15) ) { /* if voxel is transparent, and voxel above also */
                     lightMask[j] = 15;
                     // lightNodes.push(i); /* optimization idea: add node only if 1 or more neighbouring voxel light is 0 (but transparent) */
                 }
-                else if (this->texture[i] != 0) /* if voxel is opaque */
+                else// if (!isVoxelTransparent(i)) /* if voxel is opaque */
                     lightMask[j] = 0;
                 lightMap[i] = lightMask[j];
             }
@@ -273,6 +288,69 @@ void    Chunk::computeLight( std::array<Chunk*, 6> neighbouringChunks, const uin
     this->lighted = true;
 }
 
+void    Chunk::computeWater( std::array<Chunk*, 6> neighbouringChunks ) {
+    const int m = this->margin / 2;
+    std::queue<int>   waterNodes;
+
+    const std::array<int, 6> offset = { 1, -1, this->y_step, -this->y_step, paddedSize.x, -paddedSize.x };
+    // const std::array<int, 6> offsetInv = { -chunkSize.x, chunkSize.x, -this->y_step * chunkSize.y, this->y_step * chunkSize.y, -paddedSize.x * chunkSize.z, paddedSize.x * chunkSize.z };
+    const std::array<int, 6> offsetInv = { -chunkSize.x, chunkSize.x, -this->y_step * chunkSize.y, this->y_step * chunkSize.y, -paddedSize.x * chunkSize.z, paddedSize.x * chunkSize.z };
+
+    /* initial pass to add nodes generated in texture */
+    for (int y = chunkSize.y; y >= 0; --y)
+        for (int z = -1; z < chunkSize.z+1; ++z)
+            for (int x = -1; x < chunkSize.x+1; ++x) {
+                int i = (x+m) + (z+m) * paddedSize.x + (y+m) * this->y_step;
+                if (!isBorder(i)) {
+                    if (this->texture[i] == 15) /* if voxel is water source, add node */
+                        waterNodes.push(i);
+                }
+                else { /* handle neighbouring chunks */
+                    // int side = getBorderId(i);
+                    int side = 6;
+                    if (x == chunkSize.x) side = 0;
+                    else if (x == -1) side = 1;
+                    if (y == chunkSize.y) side = 2;
+                    if (z == chunkSize.x) side = 4;
+                    else if (z == -1) side = 5;
+
+                    if (neighbouringChunks[side] != nullptr && side < 6) {
+                        // int value = (int)neighbouringChunks[side]->getTexture()[i + offsetInv[side] - offset[side]];
+                        int value = (int)neighbouringChunks[side]->getTexture()[i + offsetInv[side]];
+                        if (value == 15) {
+                            this->texture[i] = 15;
+                            waterNodes.push(i);
+                        }
+                    }
+                }
+            }
+    /* propagation pass */
+    while (waterNodes.empty() == false) {
+        int index = waterNodes.front();
+        waterNodes.pop();
+
+        for (int side = 0; side < 6; side++) {
+            // if (!isBorder(index + offset[side])) {
+                /* if block is opaque and light value is at least 2 under current light */
+                if (side != 2 && this->texture[index + offset[side]] == 0) { /* propagate water on air blocks */
+                    this->texture[index + offset[side]] = 15;
+                    waterNodes.push(index + offset[side]);
+                }
+            // }
+            // else { /* we're on a chunk border */
+            //     int value = this->texture[index + offset[side]];
+            //     if (neighbouringChunks[side] != nullptr && side != 2 && side != 3)
+            //         value = (int)neighbouringChunks[side]->getTexture()[ (index + offsetInv[side]) - offset[side] ];
+                
+            //     if (this->texture[index + offset[side]] == 0 && value == 15) {
+            //         this->texture[index + offset[side]] = 15;
+            //         waterNodes.push(index + offset[side]);
+            //     }
+            // }
+        }
+    }
+}
+
 void    Chunk::render( Shader shader, Camera& camera, GLuint textureAtlas, uint renderDistance ) {
     float distHorizontal = glm::distance(this->position * glm::vec3(1,0,1), camera.getPosition() * glm::vec3(1,0,1));
     if (distHorizontal > renderDistance * 3.0f) {
@@ -280,7 +358,7 @@ void    Chunk::render( Shader shader, Camera& camera, GLuint textureAtlas, uint 
         return;
     }
     glm::vec3 size = this->chunkSize;
-    if (camera.aabInFustrum(-(this->position + size / 2), size) && this->voxels.size() > 0 && this->texture && distHorizontal - 16 <= renderDistance) {
+    if (camera.aabInFustrum(-(this->position + size / 2), size) && this->texture && distHorizontal - 16 <= renderDistance) {
         /* set transform matrix */
         shader.setMat4UniformValue("_mvp", camera.getViewProjectionMatrix() * this->transform);
         shader.setMat4UniformValue("_model", this->transform);
@@ -288,20 +366,61 @@ void    Chunk::render( Shader shader, Camera& camera, GLuint textureAtlas, uint 
         glActiveTexture(GL_TEXTURE0);
         shader.setIntUniformValue("atlas", 0);
         glBindTexture(GL_TEXTURE_2D, textureAtlas);
-        /* render */
-        glBindVertexArray(this->vao);
-        glDrawArrays(GL_POINTS, 0, this->voxels.size());
-        glBindVertexArray(0);
+
+        /* render opaque */
+        if (this->voxelsOpaque.size() > 0) {
+            glBindVertexArray(this->vaoOpaqueMesh);
+            glDrawArrays(GL_POINTS, 0, this->voxelsOpaque.size());
+            glBindVertexArray(0);
+        }
+        /* render transparent */
+        if (this->voxelsTransparent.size() > 0) {
+            /* perform small offset of mesh to have waterline a bit lower */
+            glm::mat4 newTransform = this->transform;
+            newTransform = glm::translate(newTransform, glm::vec3(0, -0.25, 0)); /* ISSUE: with face culling if we offset down or up */
+            shader.setMat4UniformValue("_mvp", camera.getViewProjectionMatrix() * newTransform);
+            shader.setMat4UniformValue("_model", newTransform);
+
+            glBindVertexArray(this->vaoTransparentMesh);
+            glDrawArrays(GL_POINTS, 0, this->voxelsTransparent.size());
+            glBindVertexArray(0);
+        }
     }
 }
 
-void    Chunk::setup( int mode ) {
-	glGenVertexArrays(1, &this->vao);
-    glGenBuffers(1, &this->vbo);
-	glBindVertexArray(this->vao);
-	glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
-	glBufferData(GL_ARRAY_BUFFER, this->voxels.size() * sizeof(tPoint), this->voxels.data(), mode);
+void    Chunk::setupMeshOpaque( int mode ) {
+	glGenVertexArrays(1, &this->vaoOpaqueMesh);
+    glGenBuffers(1, &this->vboOpaqueMesh);
+	glBindVertexArray(this->vaoOpaqueMesh);
+	glBindBuffer(GL_ARRAY_BUFFER, this->vboOpaqueMesh);
+	glBufferData(GL_ARRAY_BUFFER, this->voxelsOpaque.size() * sizeof(tPoint), this->voxelsOpaque.data(), mode);
+    /* position attribute */
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(tPoint), static_cast<GLvoid*>(0));
+    /* ao attribute */
+    glEnableVertexAttribArray(1);
+	glVertexAttribIPointer(1, 2, GL_INT, sizeof(tPoint), reinterpret_cast<GLvoid*>(offsetof(tPoint, ao)));
+    /* id attribute */
+    glEnableVertexAttribArray(2);
+	glVertexAttribIPointer(2, 1, GL_UNSIGNED_BYTE, sizeof(tPoint), reinterpret_cast<GLvoid*>(offsetof(tPoint, id)));
+    /* occluded faces attribute */
+    glEnableVertexAttribArray(3);
+	glVertexAttribIPointer(3, 1, GL_UNSIGNED_BYTE, sizeof(tPoint), reinterpret_cast<GLvoid*>(offsetof(tPoint, visibleFaces)));
+    /* light attribute */
+    glEnableVertexAttribArray(4);
+	glVertexAttribIPointer(4, 1, GL_INT, sizeof(tPoint), reinterpret_cast<GLvoid*>(offsetof(tPoint, light)));
 
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+}
+
+void    Chunk::setupMeshTransparent( int mode ) {
+    /* new for transparent */
+    glGenVertexArrays(1, &this->vaoTransparentMesh);
+    glGenBuffers(1, &this->vboTransparentMesh);
+	glBindVertexArray(this->vaoTransparentMesh);
+	glBindBuffer(GL_ARRAY_BUFFER, this->vboTransparentMesh);
+	glBufferData(GL_ARRAY_BUFFER, this->voxelsTransparent.size() * sizeof(tPoint), this->voxelsTransparent.data(), mode);
     /* position attribute */
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(tPoint), static_cast<GLvoid*>(0));

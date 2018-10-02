@@ -125,19 +125,18 @@ void    Terrain::computeChunkLight( void ) {
     for (auto it = this->chunks.begin(); it != this->chunks.end(); ++it) {
         Chunk* above = (chunks.find({it->first.p+glm::vec3(0,1,0)}) != chunks.end() ? chunks[{it->first.p+glm::vec3(0,1,0)}] : nullptr);
         if (!it->second->isLighted() && (it->first.p.y+1 >= 8 || (above != nullptr && above->isLighted())) ) {
-        // if (!it->second->isLighted()) {
             /* the lightMask is the last vertical slice of the LightMap of previous chunk (must compute it) */
             std::array<Chunk*, 6> neighbouringChunks = {
-                nullptr,nullptr,nullptr,nullptr,nullptr,nullptr
-                // (chunks.find({it->first.p + glm::vec3(1,0,0)}) != chunks.end() ? chunks[{it->first.p + glm::vec3(1,0,0)}] : nullptr),
-                // (chunks.find({it->first.p - glm::vec3(1,0,0)}) != chunks.end() ? chunks[{it->first.p - glm::vec3(1,0,0)}] : nullptr),
-                // (chunks.find({it->first.p + glm::vec3(0,1,0)}) != chunks.end() ? chunks[{it->first.p + glm::vec3(0,1,0)}] : nullptr),
-                // (chunks.find({it->first.p - glm::vec3(0,1,0)}) != chunks.end() ? chunks[{it->first.p - glm::vec3(0,1,0)}] : nullptr),
-                // (chunks.find({it->first.p + glm::vec3(0,0,1)}) != chunks.end() ? chunks[{it->first.p + glm::vec3(0,0,1)}] : nullptr),
-                // (chunks.find({it->first.p - glm::vec3(0,0,1)}) != chunks.end() ? chunks[{it->first.p - glm::vec3(0,0,1)}] : nullptr)
+                // nullptr,nullptr,nullptr,nullptr,nullptr,nullptr
+                (chunks.find({it->first.p + glm::vec3(1,0,0)}) != chunks.end() ? chunks[{it->first.p + glm::vec3(1,0,0)}] : nullptr),
+                (chunks.find({it->first.p - glm::vec3(1,0,0)}) != chunks.end() ? chunks[{it->first.p - glm::vec3(1,0,0)}] : nullptr),
+                (chunks.find({it->first.p + glm::vec3(0,1,0)}) != chunks.end() ? chunks[{it->first.p + glm::vec3(0,1,0)}] : nullptr),
+                (chunks.find({it->first.p - glm::vec3(0,1,0)}) != chunks.end() ? chunks[{it->first.p - glm::vec3(0,1,0)}] : nullptr),
+                (chunks.find({it->first.p + glm::vec3(0,0,1)}) != chunks.end() ? chunks[{it->first.p + glm::vec3(0,0,1)}] : nullptr),
+                (chunks.find({it->first.p - glm::vec3(0,0,1)}) != chunks.end() ? chunks[{it->first.p - glm::vec3(0,0,1)}] : nullptr)
             };
             // const uint8_t* aboveLightMask = (chunks.find({it->first.p + glm::vec3(0,1,0)}) != chunks.end() ? chunks[{it->first.p + glm::vec3(0,1,0)}]->getLightMask() : nullptr);
-            // it->second->computeLight(neighbouringChunks, aboveLightMask);
+            it->second->computeWater(neighbouringChunks); // TMP
             it->second->computeLight(neighbouringChunks, above != nullptr ? above->getLightMask() : nullptr);
         }
     }
@@ -152,16 +151,10 @@ void    Terrain::generateChunkMeshes( void ) {
 }
 
 void    Terrain::updateChunks( const glm::vec3& cameraPosition ) {
-    // tTimePoint last = std::chrono::high_resolution_clock::now();
-    
-    this->addChunksToGenerationList(cameraPosition); // under 0.3ms
-    this->generateChunkTextures(); // between 10.3 and 27.2ms
-    this->computeChunkLight(); // between 0.2 to 2.1ms
-    this->generateChunkMeshes(); // between 0.01 to 5ms
-
-
-    // tTimePoint current = std::chrono::high_resolution_clock::now();
-    // std::cout << (static_cast<tMilliseconds>(current - last)).count() << std::endl;
+    this->addChunksToGenerationList(cameraPosition);
+    this->generateChunkTextures();
+    this->computeChunkLight();
+    this->generateChunkMeshes();
 
     std::forward_list<Key> toDelete;
     int num = 0;
@@ -219,10 +212,10 @@ void    Terrain::renderChunkGeneration( const glm::vec3& position, uint8_t* data
     glViewport(m_viewport[0], m_viewport[1], m_viewport[2], m_viewport[3]);
 }
 
+/* We should find an efficient way to render from back to front (to avoid transparency visual bugs) */
 void    Terrain::renderChunks( Shader shader, Camera& camera ) {
-    for (std::pair<Key, Chunk*> chunk : this->chunks) {
+    for (std::pair<Key, Chunk*> chunk : this->chunks)
         chunk.second->render(shader, camera, this->textureAtlas, renderDistance);
-    }
 }
 
 void    Terrain::setupChunkGenerationRenderingQuad( void ) {

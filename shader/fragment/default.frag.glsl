@@ -45,7 +45,7 @@ sMaterial material = sMaterial(
 );
 
 /* the offsets for the bloc textures (top, bottom, side) */
-const sOffset offsets[14] = sOffset[](
+const sOffset offsets[15] = sOffset[](
     sOffset( ivec2(2, 0), ivec2(2, 0), ivec2(2, 0) ), // 0: dirt
     sOffset( ivec2(0, 0), ivec2(2, 0), ivec2(3, 0) ), // 1: grass
     sOffset( ivec2(1, 0), ivec2(1, 0), ivec2(1, 0) ), // 2: stone
@@ -59,7 +59,8 @@ const sOffset offsets[14] = sOffset[](
     sOffset( ivec2(3, 1), ivec2(3, 1), ivec2(3, 1) ), //10: gravel
     sOffset( ivec2(2, 1), ivec2(2, 1), ivec2(2, 1) ), //11: sand
     sOffset( ivec2(5, 1), ivec2(5, 1), ivec2(4, 1) ), //12: oak wood
-    sOffset( ivec2(5, 3), ivec2(5, 3), ivec2(5, 3) )  //13: oak leaves
+    sOffset( ivec2(5, 3), ivec2(5, 3), ivec2(5, 3) ), //13: oak leaves
+    sOffset( ivec2(4,33), ivec2(4,33), ivec2(4,33) )  //14: water
 );
 const ivec2 atlasSize = ivec2(24, 42);
 
@@ -82,16 +83,8 @@ vec4    getBlocTexture( void ) {
 
 void main() {
     vec3 viewDir = normalize(cameraPos - FragPos);
-
     vec3 result = computeDirectionalLight(directionalLight, Normal, viewDir, vec4(0.0));
-
-    // FragColor = vec4(result, material.opacity);
-    // if (mod(FragPos.x, 32.0)*mod(FragPos.y, 32.0)*mod(FragPos.z, 32.0) <= 0.5) {
-    //     FragColor = vec4(vec3(0.0, 1.0, 0.2), 1.);
-    //     return;
-    // }
-    // FragColor = vec4((Normal * 0.5 + 0.4) * vec3(1., 0.5, 0.5), 1.0);
-    FragColor = vec4(getBlocTexture().xyz * result * Ao * (Light*0.9+0.1), 1.0);
+    FragColor = vec4(getBlocTexture().xyz * Ao * (Light*0.8+0.2), (Id == 14 ? 0.65 : 1.0) );
     // FragColor = vec4(getBlocTextureNoSeams().xyz * Ao * (Light*0.8+0.2), 1.0);
 }
 

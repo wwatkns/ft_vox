@@ -61,7 +61,7 @@ void	Renderer::loop( void ) {
         this->env->getTerrain()->updateChunks(this->camera.getPosition());
 
         /* DEBUG */
-        std::cout << (static_cast<tMilliseconds>(std::chrono::high_resolution_clock::now() - lastTime)).count() << std::endl;
+        // std::cout << (static_cast<tMilliseconds>(std::chrono::high_resolution_clock::now() - lastTime)).count() << std::endl;
 
         /* display framerate */
         // tTimePoint current = std::chrono::high_resolution_clock::now();
