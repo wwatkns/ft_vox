@@ -34,7 +34,8 @@ public:
     ~Chunk( void );
 
     void                buildMesh( void );
-    void                computeLight( std::array<const uint8_t*, 6> neighbouringChunks, const uint8_t* aboveLightMask );
+    void                computeLight( std::array<Chunk*, 6> neighbouringChunks, const uint8_t* aboveLightMask, bool intermediary = false );
+    // void                computeLight( std::array<const uint8_t*, 6> neighbouringChunks, const uint8_t* aboveLightMask );
     void                render( Shader shader, Camera& camera, GLuint textureAtlas, uint renderDistance );
     /* getters */
     const GLuint&       getVao( void ) const { return vao; };

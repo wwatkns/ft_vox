@@ -17,6 +17,7 @@
 #include <map>
 #include <queue>
 #include <set>
+#include <unordered_set>
 
 #include "Exception.hpp"
 #include "Shader.hpp"
@@ -62,6 +63,15 @@ struct KeyHash {
     }
 };
 
+struct  setChunkRenderCompare {
+    bool operator()(const glm::vec4& a, const glm::vec4& b) const {
+        return (a.w < b.w);
+    }
+};
+/*
+    glm::vec4(position, distance on xz plane)
+    return (dist < b.dist || (dist == b.dist && pos.y > b.pos.y) );
+*/
 
 class Terrain {
 
@@ -81,7 +91,8 @@ public:
 
 private:
     std::unordered_map<Key, Chunk*, KeyHash>    chunks;
-    // std::unordered_map<glm::vec3, vec3Comp>     chunksToGenerate; /* we need a map to be able to generate the chunks in order from top to bottom */
+    std::set<glm::vec4, setChunkRenderCompare>  chunksToGenerate;
+    // std::unordered_set<glm::vec4>               chunksToGenerate; /* we need a map to be able to generate the chunks in order from top to bottom */
     // std::priority_queue<uint64_t>       chunksToGenerate; /* we need a map to be able to generate the chunks in order from top to bottom */
     int                                         maxChunksGeneratedPerFrame;
     glm::ivec3                  chunkSize;

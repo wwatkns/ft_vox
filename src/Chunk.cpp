@@ -218,7 +218,7 @@ const bool  Chunk::isMaskZero( const uint8_t* mask ) {
     return !b;
 }
 
-void    Chunk::computeLight( std::array<const uint8_t*, 6> neighbouringChunks, const uint8_t* aboveLightMask ) {
+void    Chunk::computeLight( std::array<Chunk*, 6> neighbouringChunks, const uint8_t* aboveLightMask, bool intermediary ) {
     const int m = this->margin / 2;
     // std::queue<int>   lightNodes;
 
@@ -245,17 +245,13 @@ void    Chunk::computeLight( std::array<const uint8_t*, 6> neighbouringChunks, c
                 lightMap[i] = lightMask[j];
             }
     /* propagation pass */
+    // const std::array<int, 6> offset = { 1, -1, this->y_step, -this->y_step, paddedSize.x, -paddedSize.x };
+    // const std::array<int, 6> offsetInv = { -chunkSize.x, chunkSize.x, -this->y_step * chunkSize.y, this->y_step * chunkSize.y, -paddedSize.x * chunkSize.z, paddedSize.x * chunkSize.z };
     // while (lightNodes.empty() == false) {
     //     int index = lightNodes.front();
     //     lightNodes.pop();
-
-    //     const std::array<int, 6> offset = { 1, -1, this->y_step, -this->y_step, paddedSize.x, -paddedSize.x };
-    //     const std::array<int, 6> offsetInv = { -chunkSize.x, chunkSize.x, -this->y_step * chunkSize.y, this->y_step * chunkSize.y, -paddedSize.x * chunkSize.z, paddedSize.x * chunkSize.z };
-
     //     int currentLight = this->lightMap[index];
-
     //     for (int side = 0; side < 6; side++) {
-
     //         if (!isBorder(index + offset[side])) {
     //             /* if block is opaque and light value is at least 2 under current light */
     //             if (this->texture[index + offset[side]] == 0 && this->lightMap[index + offset[side]] + 2 <= currentLight) {
@@ -264,14 +260,10 @@ void    Chunk::computeLight( std::array<const uint8_t*, 6> neighbouringChunks, c
     //             }
     //         }
     //         else { /* we're on a chunk border */
-    //             // std::cout << currentLight << std::endl;
-    //             // neighbouringChunks[side][ (index + (paddedSize.x - x * 2)) - offset[side] ]
     //             int value = this->lightMap[index + offset[side]];
-                
     //             if (neighbouringChunks[side] != nullptr && side != 2 && side != 3)
-    //                 value = std::max(value, (int)neighbouringChunks[side][ (index + offsetInv[side]) - offset[side] ]);
-
-    //             if (this->texture[index + offset[side]] == 0 && value + 2 <= currentLight) {
+    //                 value = std::max(value, (int)neighbouringChunks[side]->getLightMap()[ (index + offsetInv[side]) - offset[side] ]);
+    //             if (this->texture[index + offset[side]] == 0 && value + 1 <= currentLight) {
     //                 this->lightMap[index + offset[side]] = currentLight - 1;
     //                 lightNodes.push(index + offset[side]);
     //             }
@@ -282,14 +274,13 @@ void    Chunk::computeLight( std::array<const uint8_t*, 6> neighbouringChunks, c
 }
 
 void    Chunk::render( Shader shader, Camera& camera, GLuint textureAtlas, uint renderDistance ) {
-    if (glm::distance(this->position * glm::vec3(1,0,1), camera.getPosition() * glm::vec3(1,0,1)) > renderDistance * 3.0f) {
+    float distHorizontal = glm::distance(this->position * glm::vec3(1,0,1), camera.getPosition() * glm::vec3(1,0,1));
+    if (distHorizontal > renderDistance * 3.0f) {
         outOfRange = true;
         return;
-    } else {
-        outOfRange = false;
     }
     glm::vec3 size = this->chunkSize;
-    if (camera.aabInFustrum(-(this->position + size / 2), size) && this->voxels.size() > 0 && this->texture) {
+    if (camera.aabInFustrum(-(this->position + size / 2), size) && this->voxels.size() > 0 && this->texture && distHorizontal - 16 <= renderDistance) {
         /* set transform matrix */
         shader.setMat4UniformValue("_mvp", camera.getViewProjectionMatrix() * this->transform);
         shader.setMat4UniformValue("_model", this->transform);

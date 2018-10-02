@@ -88,12 +88,15 @@ float   fbm3d(in vec3 st, in float amplitude, in float frequency, in int octaves
 float   map(vec3 p) {
     /* TODO : implement biomes with voronoi cells */
     float res;
+    /* ceiling level */
+    if (p.y > 255)
+        return 0;
     /* bedrock level */
     if (p.y == 0 || fbm3d(p, 1.0, 20.0, 2, 1.5, 0.5) > p.y/3.)
         return BEDROCK;
     /* terrain and caves */
-    int g0 = int(fbm3d(p, 0.5, 0.008, 6, 1.7, 0.5) > p.y / 255.); /*  low-frequency landscape */
-    int g1 = int(fbm3d(p, 0.5, 0.025, 4, 1.5, 0.5) > p.y / 255.); /* high-frequency landscape */
+    int g0 = int(fbm3d(p, 0.4, 0.0075, 6, 1.7, 0.5) > p.y / 340.); /*  low-frequency landscape */
+    int g1 = int(fbm3d(p, 0.5, 0.0215, 4, 1.4, 0.5) > p.y / 340.); /* high-frequency landscape */
 
     // int g2 = int( (1-abs( fbm3d(vec3(p.x-5,  p.y, p.z + 21.), 0.5, 0.03, 5, 1.9, 0.48) * 2.-1.)) * 
                 //   (1-abs( fbm3d(vec3(p.z, p.y+4., p.x - 42.), 0.5, 0.03, 5, 1.9, 0.48) * 2.-1.)) < 0.9);
@@ -112,10 +115,10 @@ float   map(vec3 p) {
     int g12= int(fbm3d(p-160., 0.45, 0.35, 3, 0.2, 0.30) < 0.1 && p.y < 16); /* redstone */
     int g5 = int(fbm3d(p+100., 0.45, 0.20, 3, 1.5, 0.38) < 0.1 && p.y < 16); /* diamond */
     /* stone (we use the same values for fbm as landscape but with a vertical offset) */
-    int g7 = int(fbm3d(p+vec3(0,20,0), 0.5, 0.008, 5, 1.7, 0.5) > p.y / 255.); /*  low-frequency landscape */
-    g7 &= int(fbm3d(p+vec3(0,20,0), 0.5, 0.025, 3, 1.5, 0.5) > p.y / 255.);    /* high-frequency landscape */
-    g7 &= int(fbm3d(p+vec3(0,5,0), 0.5, 0.008, 5, 1.7, 0.5) > p.y / 255.);     /*  low-frequency landscape */
-    g7 &= int(fbm3d(p+vec3(0,5,0), 0.5, 0.025, 3, 1.5, 0.5) > p.y / 255.);     /* high-frequency landscape */
+    int g7 = int(fbm3d(p+vec3(0,16,0), 0.40, 0.0075, 5, 1.7, 0.5) > p.y / 340.); /*  low-frequency landscape */
+       g7 &= int(fbm3d(p+vec3(0,16,0), 0.55, 0.0215, 3, 1.4, 0.5) > p.y / 340.); /* high-frequency landscape */
+       g7 &= int(fbm3d(p+vec3(0, 5,0), 0.40, 0.0075, 5, 1.7, 0.5) > p.y / 340.); /*  low-frequency landscape */
+       g7 &= int(fbm3d(p+vec3(0, 5,0), 0.55, 0.0215, 3, 1.4, 0.5) > p.y / 340.); /* high-frequency landscape */
     /* pockets of dirt and gravel in undergrounds */
     int g8 = int(abs(fbm3d(p+40, 0.32, 0.11, 3, 1.0, 0.5)*2.-1.) < 0.05 + (1.0-p.y/96.)*0.05);
     int g9 = int(fbm3d(p-70, 0.45, 0.14, 3, 1.0, 0.2) < 0.05 + (1.0-p.y/200.)*0.05);
@@ -128,15 +131,15 @@ float   map(vec3 p) {
 
     res = float(g0 & g1 & g2 & g13) * DIRT;
 
-    res = (res == DIRT  && g7 == 1 ? STONE : res );
-    res = (res == STONE && g5 == 1 ? DIAMOND : res );
+    res = (res == DIRT  &&  g7 == 1 ? STONE : res );
+    res = (res == STONE &&  g5 == 1 ? DIAMOND : res );
     res = (res == STONE && g12 == 1 ? REDSTONE : res );
     res = (res == STONE && g11 == 1 ? LAPIS : res );
     res = (res == STONE && g10 == 1 ? GOLD : res );
-    res = (res == STONE && g4 == 1 ? IRON : res );
-    res = (res == STONE && g3 == 1 ? COAL : res );
-    res = (res == STONE && g8 == 1 ? DIRT : res );
-    res = (res == STONE && g9 == 1 ? GRAVEL : res );
+    res = (res == STONE &&  g4 == 1 ? IRON : res );
+    res = (res == STONE &&  g3 == 1 ? COAL : res );
+    res = (res == STONE &&  g8 == 1 ? DIRT : res );
+    res = (res == STONE &&  g9 == 1 ? GRAVEL : res );
     // res = (res == DIRT && g14 == 0 ? OAK_WOOD : res);
     res = (res == AIR && g5 == 1 ? SAND : res );
 

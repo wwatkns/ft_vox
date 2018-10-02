@@ -9,7 +9,7 @@ camera(80, (float)env->getWindow().width / (float)env->getWindow().height, 0.1f,
     this->shader["skybox"]  = new Shader("./shader/vertex/skybox.vert.glsl", "./shader/fragment/skybox.frag.glsl");
     this->shader["fxaa"]  = new Shader("./shader/vertex/screenQuad.vert.glsl", "./shader/fragment/FXAA.frag.glsl");
     this->lastTime = std::chrono::steady_clock::now();
-    this->framerate = 1000.0;
+    this->framerate = 60.0;
 
     // this->initDepthMap();
     this->fxaa = false;
@@ -35,6 +35,7 @@ void	Renderer::loop( void ) {
         this->env->getController()->update();
         this->camera.handleInputs(this->env->getController()->getKeys(), this->env->getController()->getMouse());
 
+        tTimePoint lastTime = std::chrono::high_resolution_clock::now();
         if (this->fxaa) {
             /* two pass rendering (for FXAA) */
             glBindFramebuffer(GL_FRAMEBUFFER, this->framebuffer.fbo);
@@ -52,18 +53,24 @@ void	Renderer::loop( void ) {
             glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             this->renderLights();
-            this->renderMeshes();
             this->renderSkybox();
+            this->renderMeshes();
         }
         glfwSwapBuffers(this->env->getWindow().ptr);
+        /* test, update the chunks after rendering */
+        this->env->getTerrain()->updateChunks(this->camera.getPosition());
+
+        /* DEBUG */
+        std::cout << (static_cast<tMilliseconds>(std::chrono::high_resolution_clock::now() - lastTime)).count() << std::endl;
+
         /* display framerate */
-        tTimePoint current = std::chrono::steady_clock::now();
-        frames++;
-        if ((static_cast<tMilliseconds>(current - this->lastTime)).count() > 999) {
-            std::cout << frames << " fps" << std::endl;
-            this->lastTime = current;
-            frames = 0;
-        }
+        // tTimePoint current = std::chrono::high_resolution_clock::now();
+        // frames++;
+        // if ((static_cast<tMilliseconds>(current - this->lastTime)).count() > 999) {
+        //     // std::cout << frames << " fps" << std::endl;
+        //     this->lastTime = current;
+        //     frames = 0;
+        // }
         /* cap framerate */
         double delta = std::abs(glfwGetTime()/1000.0 - last);
         if (delta < (1000. / this->framerate))
@@ -93,7 +100,7 @@ void    Renderer::renderMeshes( void ) {
 
     // static bool check = false;
     // if (!check) {
-        this->env->getTerrain()->updateChunks(this->camera.getPosition());
+        // this->env->getTerrain()->updateChunks(this->camera.getPosition());
         // check = true;
     // }
     
