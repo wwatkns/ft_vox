@@ -140,7 +140,6 @@ void    Terrain::addChunksToGenerationList( const glm::vec3& cameraPosition ) {
             }
         }
     }
-    /* second pass for lighting */
 /*
      - - - -+---+- - - - 
     |   |   | 7 |   |   |
@@ -154,7 +153,9 @@ void    Terrain::addChunksToGenerationList( const glm::vec3& cameraPosition ) {
     |   |   | 11|   |   |
      - - - -+---+- - - - 
 */
-    for (int y = height; y >= 0; y--) {
+    /* second pass for lighting */
+    // for (int y = height; y >= 0; y--) {
+    for (int y = 0; y <= height; y++) { /* invert y ? */
         for (int d = dist.x; d >= 0; d--) {
             float d2 = 2.*d; float d4 = 4.*d;
             if (d == 0) d4 = d2 = 0.5;

@@ -238,16 +238,17 @@ void    Chunk::computeLight( std::array<Chunk*, 6> neighbouringChunks, const uin
     const int m = this->margin / 2;
     std::queue<int>   lightNodes;
 
-    if (aboveLightMask != nullptr) { // the lightMask of the chunk above
-        memcpy(lightMask, aboveLightMask, this->y_step); // copies the mask as current lightMask
-        // if (isMaskZero(aboveLightMask)) { // if no light is present, skip
-        //     this->underground = true;
-        //     this->lighted = true;
-        //     return ;
-        // }
-    }
-    /* first pass (/!\ DON'T TOUCH, IT'S PERFECT) */
     if (this->lightPasses == 0) { /* only do on first pass */
+        if (aboveLightMask != nullptr) { // the lightMask of the chunk above
+            memcpy(lightMask, aboveLightMask, this->y_step); // copies the mask as current lightMask
+            // if (isMaskZero(aboveLightMask)) { // if no light is present, skip
+            //     this->underground = true;
+            //     this->lighted = true;
+            //     this->lightPasses++;
+            //     return ;
+            // }
+        }
+        /* first pass (/!\ DON'T TOUCH, IT'S PERFECT) */
         for (int y = chunkSize.y; y >= 0; --y)
             for (int z = -1; z < chunkSize.z+1; ++z)
                 for (int x = -1; x < chunkSize.x+1; ++x) {
@@ -265,60 +266,50 @@ void    Chunk::computeLight( std::array<Chunk*, 6> neighbouringChunks, const uin
     const std::array<int, 6> offset = { 1, -1, this->y_step, -this->y_step, paddedSize.x, -paddedSize.x };
     const std::array<int, 6> offsetInv = { -chunkSize.x, chunkSize.x, -this->y_step * chunkSize.y, this->y_step * chunkSize.y, -paddedSize.x * chunkSize.z, paddedSize.x * chunkSize.z };
     /* create nodes from neighbouring chunks */
-    // for (int y = chunkSize.y; y >= 0; --y)
-    //     for (int z = -1; z < chunkSize.z+1; ++z)
-    //         for (int x = -1; x < chunkSize.x+1; ++x) {
+    // for (int y = chunkSize.y-1; y >= 0; --y)
+    //     for (int z = 0; z < chunkSize.z; ++z)
+    //         for (int x = 0; x < chunkSize.x; ++x) {
     //             int i = (x+m) + (z+m) * paddedSize.x + (y+m) * this->y_step;
-    //             if (isBorder(i)) {
+    //             if (x == 0 || y == 0 || z == 0 || x == chunkSize.x-1 || y == chunkSize.y-1 || z == chunkSize.z-1) {
     //                 int side = 6;
-    //                 if (x == chunkSize.x) side = 0;
-    //                 else if (x == -1) side = 1;
-    //                 if (y == chunkSize.y) side = 2;
-    //                 else if (y == -1) side = 3;
-    //                 if (z == chunkSize.z) side = 4;
-    //                 else if (z == -1) side = 5;
+    //                 if (x == chunkSize.x-1) side = 0; else if (x == 0) side = 1;
+    //                 if (y == chunkSize.y-1) side = 2; else if (y == 0) side = 3;
+    //                 if (z == chunkSize.z-1) side = 4; else if (z == 0) side = 5;
 
-    //                 int currentLight = this->lightMap[i - offset[side]]; // get previous value
-
-    //                 if (neighbouringChunks[side] != nullptr && side < 6 && side != 3) {
-    //                     int value = (int)neighbouringChunks[side]->getLightMap()[(i - offset[side]) + offsetInv[side]];
-    //                     if (this->texture[i] == 0 && value + 2 <= currentLight) {
+    //                 if (neighbouringChunks[side] != nullptr && side != 6) {
+    //                     int currentLight = (int)neighbouringChunks[side]->getLightMap()[i + offsetInv[side] + offset[side]];
+    //                     if (this->texture[i] == 0 && this->lightMap[i] + 2 <= currentLight) {
     //                         this->lightMap[i] = currentLight - 1;
     //                         lightNodes.push(i);
     //                     }
     //                 }
     //             }
     //         }
-    // std::cout << "---\nlightNodes: " << lightNodes.size() << std::endl;
-    for (int y = chunkSize.y-1; y >= 0; --y)
-        for (int z = 0; z < chunkSize.z; ++z)
-            for (int x = 0; x < chunkSize.x; ++x) {
+    for (int y = chunkSize.y; y >= 0; --y)
+        for (int z = -1; z < chunkSize.z+1; ++z)
+            for (int x = -1; x < chunkSize.x+1; ++x) {
                 int i = (x+m) + (z+m) * paddedSize.x + (y+m) * this->y_step;
-                if (x == 0 || y == 0 || z == 0 || x == chunkSize.x-1 || y == chunkSize.y-1 || z == chunkSize.z-1) {
+                if (x == -1 || y == -1 || z == -1 || x == chunkSize.x || y == chunkSize.y || z == chunkSize.z) {
                     int side = 6;
-                    if (x == chunkSize.x-1) side = 0; else if (x == 0) side = 1;
-                    if (y == chunkSize.y-1) side = 2; else if (y == 0) side = 3;
-                    if (z == chunkSize.z-1) side = 4; else if (z == 0) side = 5;
-
-                    int currentLight = this->lightMap[i];
+                    if (x == chunkSize.x) side = 0; else if (x == -1) side = 1;
+                    if (y == chunkSize.y) side = 2; else if (y == -1) side = 3;
+                    if (z == chunkSize.z) side = 4; else if (z == -1) side = 5;
 
                     if (neighbouringChunks[side] != nullptr && side != 6) {
-                        int value = (int)neighbouringChunks[side]->getLightMap()[i + offsetInv[side] + offset[side]];
-                        if (this->texture[i] == 0 && value + 2 <= currentLight) {
+                        int currentLight = (int)neighbouringChunks[side]->getLightMap()[i + offsetInv[side] + offset[side]];
+                        if (this->texture[i] == 0 && this->lightMap[i] + 2 <= currentLight) {
                             this->lightMap[i] = currentLight - 1;
                             lightNodes.push(i);
                         }
                     }
                 }
             }
-    // std::cout << "lightNodes: " << lightNodes.size() << std::endl;
-
     /* count number of neighbours */
-    int count = 0;
-    for (int i = 0; i < 6; i++)
-        if (neighbouringChunks[i] == nullptr)
-            count++;
-    std::cout << "empty neighbours: " << count << std::endl;
+    // int count = 0;
+    // for (int i = 0; i < 6; i++)
+    //     if (neighbouringChunks[i] == nullptr)
+    //         count++;
+    // std::cout << "empty neighbours: " << count << std::endl;
 
     /* propagation pass */
     while (lightNodes.empty() == false) {
@@ -332,16 +323,6 @@ void    Chunk::computeLight( std::array<Chunk*, 6> neighbouringChunks, const uin
                     this->lightMap[index + offset[side]] = currentLight - 1;
                     lightNodes.push(index + offset[side]);
                 }
-            // }
-            // else { /* we're on a chunk border */
-            //     int value = this->lightMap[index + offset[side]];
-            //     if (neighbouringChunks[side] != nullptr && side != 2 && side != 3)
-            //         value = std::max(value, (int)neighbouringChunks[side]->getLightMap()[ (index + offsetInv[side]) - offset[side] ]);
-            //     if (this->texture[index + offset[side]] == 0 && value + 2 <= currentLight) {
-            //         this->lightMap[index + offset[side]] = currentLight - 1;
-            //         lightNodes.push(index + offset[side]);
-            //     }
-            // }
         }
     }
     this->lighted = true;

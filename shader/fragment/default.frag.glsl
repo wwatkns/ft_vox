@@ -89,7 +89,7 @@ void main() {
     // if (mod(FragPos.x, 32.0)*mod(FragPos.y, 32.0)*mod(FragPos.z, 32.0) <= 0.5) {	
         // FragColor = vec4((getBlocTexture().xyz + 0.2) * Ao * (Light*0.9+0.1), (Id == 14 ? 0.65 : 1.0) ); return;	
     // }
-    FragColor = vec4(getBlocTexture().xyz * Ao * (Light*0.9+0.1), (Id == 14 ? 0.65 : 1.0) );
+    FragColor = vec4(getBlocTexture().xyz * Ao * (Light*0.95+0.05), (Id == 14 ? 0.65 : 1.0) );
     // FragColor = vec4(getBlocTexture().xyz * Ao * (Light*0.8+0.2), (Id == 14 ? 0.65 : 1.0) );
 
     if (underwater == 1)
