@@ -85,8 +85,12 @@ vec4    getBlocTexture( void ) {
 void main() {
     vec3 viewDir = normalize(cameraPos - FragPos);
     vec3 result = computeDirectionalLight(directionalLight, Normal, viewDir, vec4(0.0));
-    FragColor = vec4(getBlocTexture().xyz * Ao * (Light*0.8+0.2), (Id == 14 ? 0.65 : 1.0) );
-    // FragColor = vec4(getBlocTextureNoSeams().xyz * Ao * (Light*0.8+0.2), 1.0);
+    
+    // if (mod(FragPos.x, 32.0)*mod(FragPos.y, 32.0)*mod(FragPos.z, 32.0) <= 0.5) {	
+        // FragColor = vec4((getBlocTexture().xyz + 0.2) * Ao * (Light*0.9+0.1), (Id == 14 ? 0.65 : 1.0) ); return;	
+    // }
+    FragColor = vec4(getBlocTexture().xyz * Ao * (Light*0.9+0.1), (Id == 14 ? 0.65 : 1.0) );
+    // FragColor = vec4(getBlocTexture().xyz * Ao * (Light*0.8+0.2), (Id == 14 ? 0.65 : 1.0) );
 
     if (underwater == 1)
         FragColor = FragColor * vec4(0.75, 0.75, 2., 1) * vec4(vec3(5. / distance(cameraPos, FragPos)), 1);

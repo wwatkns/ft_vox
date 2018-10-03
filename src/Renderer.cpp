@@ -53,14 +53,13 @@ void	Renderer::loop( void ) {
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             this->renderLights();
             this->renderSkybox();
-
-            tTimePoint lastTime = std::chrono::high_resolution_clock::now();
+            // tTimePoint lastTime = std::chrono::high_resolution_clock::now();
             this->renderMeshes();
-            std::cout << (static_cast<tMilliseconds>(std::chrono::high_resolution_clock::now() - lastTime)).count() << std::endl;
+            // std::cout << (static_cast<tMilliseconds>(std::chrono::high_resolution_clock::now() - lastTime)).count() << std::endl;
         }
         glfwSwapBuffers(this->env->getWindow().ptr);
         /* test, update the chunks after rendering */
-        this->env->getTerrain()->updateChunks(this->camera.getPosition());
+        // this->env->getTerrain()->updateChunks(this->camera.getPosition());
 
         /* DEBUG */
 
@@ -99,11 +98,11 @@ void    Renderer::renderMeshes( void ) {
 
     this->env->getTerrain()->renderChunks(*this->shader["default"], this->camera);
 
-    // static bool check = false;
-    // if (!check) {
-        // this->env->getTerrain()->updateChunks(this->camera.getPosition());
-        // check = true;
-    // }
+    static bool check = false;
+    if (!check) {
+        this->env->getTerrain()->updateChunks(this->camera.getPosition());
+        check = true;
+    }
     
     /* copy the depth buffer to a texture (used in raymarch shader for geometry occlusion of raymarched objects) */
     // glBindTexture(GL_TEXTURE_2D, this->depthMap.id);

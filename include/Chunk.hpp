@@ -53,6 +53,7 @@ public:
     const bool          isMaskZero( const uint8_t* mask );
 
     const int           getBorderId( int i );
+    int                 lightPasses; // NEW TMP
 
 private:
     GLuint              vaoOpaqueMesh;        // Vertex Array Object
