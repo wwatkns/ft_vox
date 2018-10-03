@@ -181,7 +181,7 @@ void    Chunk::buildMesh( void ) {
                     this->voxelsOpaque.push_back( (tPoint){ glm::vec3(x, y, z), ao, b, visibleFaces, light } );
                 }
                 else if (this->texture[i] == 15 && !isVoxelCulledTransparent(i)) { /* if voxel is transparent but not air */
-                    uint8_t visibleFaces = 0x02;//getVisibleFacesTransparent(i);
+                    uint8_t visibleFaces = 0x03;
                     uint8_t b = static_cast<uint8_t>(this->texture[i] - 1);
                     glm::ivec2 ao = getVerticesAoValue(i, visibleFaces);
                     int light = ((int)lightMap[i + 1           ] << 20) | ((int)lightMap[i - 1           ] << 16) |
@@ -288,6 +288,13 @@ void    Chunk::computeLight( std::array<Chunk*, 6> neighbouringChunks, const uin
     this->lighted = true;
 }
 
+/* it's not working because :
+   if we have a chunk devoid of water source and computeWater(), then render the neighbour chunk that
+   have a water source and will propagate to this one, the computation is already done, so water will
+   not propagate to this chunk.
+   -> We should keep track of neighbour chunks, when then have computed their water, we can recompute
+      ours. That will introduce a remeshing though... Or instead we could mesh only when all neighbouring
+      chunks have computed water and we recomputed water. (same applies for lighting) */
 void    Chunk::computeWater( std::array<Chunk*, 6> neighbouringChunks ) {
     const int m = this->margin / 2;
     std::queue<int>   waterNodes;
@@ -351,7 +358,7 @@ void    Chunk::computeWater( std::array<Chunk*, 6> neighbouringChunks ) {
     }
 }
 
-void    Chunk::render( Shader shader, Camera& camera, GLuint textureAtlas, uint renderDistance ) {
+void    Chunk::render( Shader shader, Camera& camera, GLuint textureAtlas, uint renderDistance, int underwater ) {
     float distHorizontal = glm::distance(this->position * glm::vec3(1,0,1), camera.getPosition() * glm::vec3(1,0,1));
     if (distHorizontal > renderDistance * 3.0f) {
         outOfRange = true;
@@ -362,6 +369,7 @@ void    Chunk::render( Shader shader, Camera& camera, GLuint textureAtlas, uint 
         /* set transform matrix */
         shader.setMat4UniformValue("_mvp", camera.getViewProjectionMatrix() * this->transform);
         shader.setMat4UniformValue("_model", this->transform);
+        shader.setIntUniformValue("underwater", underwater);
         /* texture atlas */
         glActiveTexture(GL_TEXTURE0);
         shader.setIntUniformValue("atlas", 0);

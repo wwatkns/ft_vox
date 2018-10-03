@@ -35,6 +35,7 @@ in float Light;
 uniform sampler2D atlas;
 uniform vec3 cameraPos;
 uniform sDirectionalLight directionalLight;
+uniform int underwater; // NEW
 
 sMaterial material = sMaterial(
     vec3(0.4),
@@ -86,6 +87,9 @@ void main() {
     vec3 result = computeDirectionalLight(directionalLight, Normal, viewDir, vec4(0.0));
     FragColor = vec4(getBlocTexture().xyz * Ao * (Light*0.8+0.2), (Id == 14 ? 0.65 : 1.0) );
     // FragColor = vec4(getBlocTextureNoSeams().xyz * Ao * (Light*0.8+0.2), 1.0);
+
+    if (underwater == 1)
+        FragColor = FragColor * vec4(0.75, 0.75, 2., 1) * vec4(vec3(5. / distance(cameraPos, FragPos)), 1);
 }
 
 vec3 computeDirectionalLight( sDirectionalLight light, vec3 normal, vec3 viewDir, vec4 fragPosLightSpace ) {

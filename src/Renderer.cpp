@@ -35,7 +35,6 @@ void	Renderer::loop( void ) {
         this->env->getController()->update();
         this->camera.handleInputs(this->env->getController()->getKeys(), this->env->getController()->getMouse());
 
-        tTimePoint lastTime = std::chrono::high_resolution_clock::now();
         if (this->fxaa) {
             /* two pass rendering (for FXAA) */
             glBindFramebuffer(GL_FRAMEBUFFER, this->framebuffer.fbo);
@@ -54,14 +53,16 @@ void	Renderer::loop( void ) {
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             this->renderLights();
             this->renderSkybox();
+
+            tTimePoint lastTime = std::chrono::high_resolution_clock::now();
             this->renderMeshes();
+            std::cout << (static_cast<tMilliseconds>(std::chrono::high_resolution_clock::now() - lastTime)).count() << std::endl;
         }
         glfwSwapBuffers(this->env->getWindow().ptr);
         /* test, update the chunks after rendering */
         this->env->getTerrain()->updateChunks(this->camera.getPosition());
 
         /* DEBUG */
-        // std::cout << (static_cast<tMilliseconds>(std::chrono::high_resolution_clock::now() - lastTime)).count() << std::endl;
 
         /* display framerate */
         // tTimePoint current = std::chrono::high_resolution_clock::now();

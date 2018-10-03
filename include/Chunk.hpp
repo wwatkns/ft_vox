@@ -38,7 +38,7 @@ public:
     void                computeWater( std::array<Chunk*, 6> neighbouringChunks ); // TMP
     void                computeLight( std::array<Chunk*, 6> neighbouringChunks, const uint8_t* aboveLightMask, bool intermediary = false );
     // void                computeLight( std::array<const uint8_t*, 6> neighbouringChunks, const uint8_t* aboveLightMask );
-    void                render( Shader shader, Camera& camera, GLuint textureAtlas, uint renderDistance );
+    void                render( Shader shader, Camera& camera, GLuint textureAtlas, uint renderDistance, int underwater );
     /* getters */
     const glm::vec3&    getPosition( void ) const { return position; };
     const uint8_t*      getTexture( void ) const { return texture; };
