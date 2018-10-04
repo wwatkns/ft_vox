@@ -113,11 +113,14 @@ public:
     void                        generateChunkMeshes( void );
     void                        computeChunkLight( void );
     glm::vec3                   getChunkPosition( const glm::vec3& position );
+    std::array<Chunk*, 6>       getNeighbouringChunks( const glm::vec3& position );
 
 private:
     std::unordered_map<Key, Chunk*, KeyHash>    chunks;
     std::unordered_set<Key2, KeyHash2>          chunksToLoadSet; // need to to easy check if chunk is present in queue
     std::queue<Key2>                            chunksToLoadQueue; // queue to have ordered chunk lookup
+
+    // std::queue<Key2>                            chunksToMeshQueue; // queue to mesh chunks
 
     // std::unordered_set<glm::vec4>               chunksToGenerate; /* we need a map to be able to generate the chunks in order from top to bottom */
     int                                         maxChunksGeneratedPerFrame;

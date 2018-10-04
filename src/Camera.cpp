@@ -80,7 +80,7 @@ void    Camera::handleKeys( const std::array<tKey, N_KEY>& keys ) {
         (float)(keys[GLFW_KEY_W].value - keys[GLFW_KEY_S].value),
         1.0f
     );
-    translate = glm::vec4(0, 0, 1, 1);
+    // translate = glm::vec4(0, 0, 1, 1);
     /* translation is in the same coordinate system as view (moves in same direction) */
     translate = glm::transpose(this->viewMatrix) * glm::normalize(translate);
     this->position = this->position - glm::vec3(translate) * this->getElapsedMilliseconds(this->last).count() * this->speed * this->speedmod;
@@ -88,11 +88,11 @@ void    Camera::handleKeys( const std::array<tKey, N_KEY>& keys ) {
 }
 
 void    Camera::handleMouse( const tMouse& mouse, float sensitivity ) {
-    // this->pitch += (mouse.prevPos.y - mouse.pos.y) * sensitivity;
-    // this->pitch = std::min(std::max(this->pitch, -89.0f), 89.0f);
-    // this->yaw += (mouse.pos.x - mouse.prevPos.x) * sensitivity;
-    this->pitch = 0.0f;
-    this->yaw = 0.0f;
+    this->pitch += (mouse.prevPos.y - mouse.pos.y) * sensitivity;
+    this->pitch = std::min(std::max(this->pitch, -89.0f), 89.0f);
+    this->yaw += (mouse.pos.x - mouse.prevPos.x) * sensitivity;
+    // this->pitch = 0.0f;
+    // this->yaw = 0.0f;
     glm::vec3 front(
         std::cos(glm::radians(pitch)) * std::cos(glm::radians(yaw)),
         std::sin(glm::radians(pitch)),
