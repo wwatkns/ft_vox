@@ -266,25 +266,6 @@ void    Chunk::computeLight( std::array<Chunk*, 6> neighbouringChunks, const uin
     const std::array<int, 6> offset = { 1, -1, this->y_step, -this->y_step, paddedSize.x, -paddedSize.x };
     const std::array<int, 6> offsetInv = { -chunkSize.x, chunkSize.x, -this->y_step * chunkSize.y, this->y_step * chunkSize.y, -paddedSize.x * chunkSize.z, paddedSize.x * chunkSize.z };
     /* create nodes from neighbouring chunks */
-    // for (int y = chunkSize.y-1; y >= 0; --y)
-    //     for (int z = 0; z < chunkSize.z; ++z)
-    //         for (int x = 0; x < chunkSize.x; ++x) {
-    //             int i = (x+m) + (z+m) * paddedSize.x + (y+m) * this->y_step;
-    //             if (x == 0 || y == 0 || z == 0 || x == chunkSize.x-1 || y == chunkSize.y-1 || z == chunkSize.z-1) {
-    //                 int side = 6;
-    //                 if (x == chunkSize.x-1) side = 0; else if (x == 0) side = 1;
-    //                 if (y == chunkSize.y-1) side = 2; else if (y == 0) side = 3;
-    //                 if (z == chunkSize.z-1) side = 4; else if (z == 0) side = 5;
-
-    //                 if (neighbouringChunks[side] != nullptr && side != 6) {
-    //                     int currentLight = (int)neighbouringChunks[side]->getLightMap()[i + offsetInv[side] + offset[side]];
-    //                     if (this->texture[i] == 0 && this->lightMap[i] + 2 <= currentLight) {
-    //                         this->lightMap[i] = currentLight - 1;
-    //                         lightNodes.push(i);
-    //                     }
-    //                 }
-    //             }
-    //         }
     for (int y = chunkSize.y; y >= 0; --y)
         for (int z = -1; z < chunkSize.z+1; ++z)
             for (int x = -1; x < chunkSize.x+1; ++x) {

@@ -4,7 +4,7 @@
 Terrain::Terrain( uint renderDistance, uint maxHeight ) : renderDistance(renderDistance), maxHeight(maxHeight) {
     this->chunkSize = glm::ivec3(32, 32, 32);
     this->dataMargin = 4; // even though we only need a margin of 2, openGL does not like this number and gl_FragCoord values will be messed up...
-    this->maxChunksGeneratedPerFrame = 100;//8
+    this->maxChunksGeneratedPerFrame = 8;//8
     this->setupChunkGenerationRenderingQuad();
     this->setupChunkGenerationFbo();
     this->chunkGenerationShader = new Shader("./shader/vertex/screenQuad.vert.glsl", "./shader/fragment/generateChunk.frag.glsl");
@@ -102,12 +102,91 @@ glm::vec3   Terrain::getChunkPosition( const glm::vec3& position ) {
 //     }
 // }
 
+/*   - - - -+---+- - - - 
+    |   |   | 7 |   |   |
+     - -+---+---+---+- - 
+    |   | 6 | 2 | 8 |   |
+    +---+---+---+---+---+
+    | 5 | 1 | 0 | 3 | 9 |
+    +---+---+---+---+---+
+    |   | 12| 4 | 10|   |
+     - -+---+---+---+- - 
+    |   |   | 11|   |   |
+     - - - -+---+- - - -  */
+// void    Terrain::addChunksToGenerationList( const glm::vec3& cameraPosition ) {
+//     int height = this->maxHeight / this->chunkSize.y;
+//     glm::ivec3 dist = glm::ivec3(this->renderDistance) / this->chunkSize + 3;
+//     const float e = 0.01;
+
+//     for (int y = height; y >= 0; y--) {
+//         for (int d = 0; d <= dist.x; d++) {
+//             float d2 = 2.*d; float d4 = 4.*d;
+//             if (d == 0) d4 = d2 = 0.5;
+//             for (int xz = 0; xz < d4; xz++) {
+//                 float x_triangleWave = 2.*std::abs( std::round(0.5*( ((xz+e)/d2) - (1./d4)      )) - 0.5*( ((xz+e)/d2) - (1./d4)      ) ) * d2;
+//                 float z_triangleWave = 2.*std::abs( std::round(0.5*( ((xz+e)/d2) - (1./d4) + 0.5)) - 0.5*( ((xz+e)/d2) - (1./d4) + 0.5) ) * d2;
+//                 int x = std::abs(std::round(x_triangleWave)) - d;
+//                 int z = std::abs(std::round(z_triangleWave)) - d;
+
+//                 Key key = { this->getChunkPosition(cameraPosition) * glm::vec3(1, 0, 1) + glm::vec3(x, y, z) };
+//                 if (this->chunks.find(key) == this->chunks.end()) { /* if chunk was never generated */
+//                     /* generate chunk texture and insert it */
+//                     glm::vec3 position = key.p * (glm::vec3)this->chunkSize;
+//                     this->renderChunkGeneration(position, this->dataBuffer);
+//                     this->chunks.insert( { key, new Chunk(position, this->chunkSize, this->dataBuffer, this->dataMargin) } );
+//                     if (this->chunks[key]->lightPasses == 0) {
+//                         /* compute chunk light (first pass) */
+//                         std::array<Chunk*, 6> neighbouringChunks = {
+//                             (chunks.find({key.p+glm::vec3(1,0,0)}) != chunks.end() ? chunks[{key.p+glm::vec3(1,0,0)}] : nullptr),
+//                             (chunks.find({key.p-glm::vec3(1,0,0)}) != chunks.end() ? chunks[{key.p-glm::vec3(1,0,0)}] : nullptr),
+//                             (chunks.find({key.p+glm::vec3(0,1,0)}) != chunks.end() ? chunks[{key.p+glm::vec3(0,1,0)}] : nullptr),
+//                             (chunks.find({key.p-glm::vec3(0,1,0)}) != chunks.end() ? chunks[{key.p-glm::vec3(0,1,0)}] : nullptr),
+//                             (chunks.find({key.p+glm::vec3(0,0,1)}) != chunks.end() ? chunks[{key.p+glm::vec3(0,0,1)}] : nullptr),
+//                             (chunks.find({key.p-glm::vec3(0,0,1)}) != chunks.end() ? chunks[{key.p-glm::vec3(0,0,1)}] : nullptr)
+//                         };
+//                         const uint8_t* aboveLightMask = (chunks.find({key.p+glm::vec3(0,1,0)}) != chunks.end() ? chunks[{key.p+glm::vec3(0,1,0)}]->getLightMask() : nullptr);
+//                         this->chunks[key]->computeLight(neighbouringChunks, aboveLightMask);
+//                     }
+//                 }
+//             }
+//         }
+//     }
+//     /* second pass for lighting */
+//     for (int y = 0; y <= height; y++) { /* invert y ? */
+//         for (int d = dist.x; d >= 0; d--) {
+//             float d2 = 2.*d; float d4 = 4.*d;
+//             if (d == 0) d4 = d2 = 0.5;
+//             for (int xz = 0; xz < d4; xz++) {
+//                 float x_triangleWave = 2.*std::abs( std::round(0.5*( ((xz+e)/d2) - (1./d4)      )) - 0.5*( ((xz+e)/d2) - (1./d4)      ) ) * d2;
+//                 float z_triangleWave = 2.*std::abs( std::round(0.5*( ((xz+e)/d2) - (1./d4) + 0.5)) - 0.5*( ((xz+e)/d2) - (1./d4) + 0.5) ) * d2;
+//                 int x = std::abs(std::round(x_triangleWave)) - d;
+//                 int z = std::abs(std::round(z_triangleWave)) - d;
+//                 // std::cout << "(" << x << ", " << y << ", " << z << ")\n";
+//                 Key key = { this->getChunkPosition(cameraPosition) * glm::vec3(1, 0, 1) + glm::vec3(x, y, z) };
+//                 if (this->chunks[key]->lightPasses == 1) {
+//                     /* compute chunk light */
+//                     std::array<Chunk*, 6> neighbouringChunks = {
+//                         (chunks.find({key.p+glm::vec3(1,0,0)}) != chunks.end() ? chunks[{key.p+glm::vec3(1,0,0)}] : nullptr),
+//                         (chunks.find({key.p-glm::vec3(1,0,0)}) != chunks.end() ? chunks[{key.p-glm::vec3(1,0,0)}] : nullptr),
+//                         (chunks.find({key.p+glm::vec3(0,1,0)}) != chunks.end() ? chunks[{key.p+glm::vec3(0,1,0)}] : nullptr),
+//                         (chunks.find({key.p-glm::vec3(0,1,0)}) != chunks.end() ? chunks[{key.p-glm::vec3(0,1,0)}] : nullptr),
+//                         (chunks.find({key.p+glm::vec3(0,0,1)}) != chunks.end() ? chunks[{key.p+glm::vec3(0,0,1)}] : nullptr),
+//                         (chunks.find({key.p-glm::vec3(0,0,1)}) != chunks.end() ? chunks[{key.p-glm::vec3(0,0,1)}] : nullptr)
+//                     };
+//                     const uint8_t* aboveLightMask = (chunks.find({key.p+glm::vec3(0,1,0)}) != chunks.end() ? chunks[{key.p+glm::vec3(0,1,0)}]->getLightMask() : nullptr);
+//                     this->chunks[key]->computeLight(neighbouringChunks, aboveLightMask);  
+//                 }
+//             }
+//         }
+//     }
+// }
+
 void    Terrain::addChunksToGenerationList( const glm::vec3& cameraPosition ) {
     int height = this->maxHeight / this->chunkSize.y;
     glm::ivec3 dist = glm::ivec3(this->renderDistance) / this->chunkSize + 3;
     const float e = 0.01;
 
-    for (int y = height; y >= 0; y--) {
+    for (int y = height-1; y >= 0; y--) {
         for (int d = 0; d <= dist.x; d++) {
             float d2 = 2.*d; float d4 = 4.*d;
             if (d == 0) d4 = d2 = 0.5;
@@ -118,44 +197,16 @@ void    Terrain::addChunksToGenerationList( const glm::vec3& cameraPosition ) {
                 int z = std::abs(std::round(z_triangleWave)) - d;
 
                 Key key = { this->getChunkPosition(cameraPosition) * glm::vec3(1, 0, 1) + glm::vec3(x, y, z) };
-                if (this->chunks.find(key) == this->chunks.end()) { /* if chunk was never generated */
-                    /* generate chunk texture and insert it */
-                    glm::vec3 position = key.p * (glm::vec3)this->chunkSize;
-                    this->renderChunkGeneration(position, this->dataBuffer);
-                    this->chunks.insert( { key, new Chunk(position, this->chunkSize, this->dataBuffer, this->dataMargin) } );
-                    if (this->chunks[key]->lightPasses == 0) {
-                        /* compute chunk light (first pass) */
-                        std::array<Chunk*, 6> neighbouringChunks = {
-                            (chunks.find({key.p+glm::vec3(1,0,0)}) != chunks.end() ? chunks[{key.p+glm::vec3(1,0,0)}] : nullptr),
-                            (chunks.find({key.p-glm::vec3(1,0,0)}) != chunks.end() ? chunks[{key.p-glm::vec3(1,0,0)}] : nullptr),
-                            (chunks.find({key.p+glm::vec3(0,1,0)}) != chunks.end() ? chunks[{key.p+glm::vec3(0,1,0)}] : nullptr),
-                            (chunks.find({key.p-glm::vec3(0,1,0)}) != chunks.end() ? chunks[{key.p-glm::vec3(0,1,0)}] : nullptr),
-                            (chunks.find({key.p+glm::vec3(0,0,1)}) != chunks.end() ? chunks[{key.p+glm::vec3(0,0,1)}] : nullptr),
-                            (chunks.find({key.p-glm::vec3(0,0,1)}) != chunks.end() ? chunks[{key.p-glm::vec3(0,0,1)}] : nullptr)
-                        };
-                        const uint8_t* aboveLightMask = (chunks.find({key.p+glm::vec3(0,1,0)}) != chunks.end() ? chunks[{key.p+glm::vec3(0,1,0)}]->getLightMask() : nullptr);
-                        this->chunks[key]->computeLight(neighbouringChunks, aboveLightMask);
-                    }
+                Key2 key2 = { glm::vec4(key.p, 1) };
+                if (this->chunks.find(key) == this->chunks.end() && this->chunksToLoadSet.find(key2) == this->chunksToLoadSet.end()) { /* if chunk was never generated */
+                    this->chunksToLoadQueue.push(key2);
+                    this->chunksToLoadSet.insert(key2);
                 }
             }
         }
     }
-/*
-     - - - -+---+- - - - 
-    |   |   | 7 |   |   |
-     - -+---+---+---+- - 
-    |   | 6 | 2 | 8 |   |
-    +---+---+---+---+---+
-    | 5 | 1 | 0 | 3 | 9 |
-    +---+---+---+---+---+
-    |   | 12| 4 | 10|   |
-     - -+---+---+---+- - 
-    |   |   | 11|   |   |
-     - - - -+---+- - - - 
-*/
     /* second pass for lighting */
-    // for (int y = height; y >= 0; y--) {
-    for (int y = 0; y <= height; y++) { /* invert y ? */
+    for (int y = 0; y < height; y++) { /* invert y ? */
         for (int d = dist.x; d >= 0; d--) {
             float d2 = 2.*d; float d4 = 4.*d;
             if (d == 0) d4 = d2 = 0.5;
@@ -166,88 +217,145 @@ void    Terrain::addChunksToGenerationList( const glm::vec3& cameraPosition ) {
                 int z = std::abs(std::round(z_triangleWave)) - d;
                 // std::cout << "(" << x << ", " << y << ", " << z << ")\n";
                 Key key = { this->getChunkPosition(cameraPosition) * glm::vec3(1, 0, 1) + glm::vec3(x, y, z) };
-                if (this->chunks[key]->lightPasses == 1) {
-                    /* compute chunk light */
-                    std::array<Chunk*, 6> neighbouringChunks = {
-                        (chunks.find({key.p+glm::vec3(1,0,0)}) != chunks.end() ? chunks[{key.p+glm::vec3(1,0,0)}] : nullptr),
-                        (chunks.find({key.p-glm::vec3(1,0,0)}) != chunks.end() ? chunks[{key.p-glm::vec3(1,0,0)}] : nullptr),
-                        (chunks.find({key.p+glm::vec3(0,1,0)}) != chunks.end() ? chunks[{key.p+glm::vec3(0,1,0)}] : nullptr),
-                        (chunks.find({key.p-glm::vec3(0,1,0)}) != chunks.end() ? chunks[{key.p-glm::vec3(0,1,0)}] : nullptr),
-                        (chunks.find({key.p+glm::vec3(0,0,1)}) != chunks.end() ? chunks[{key.p+glm::vec3(0,0,1)}] : nullptr),
-                        (chunks.find({key.p-glm::vec3(0,0,1)}) != chunks.end() ? chunks[{key.p-glm::vec3(0,0,1)}] : nullptr)
-                    };
-                    const uint8_t* aboveLightMask = (chunks.find({key.p+glm::vec3(0,1,0)}) != chunks.end() ? chunks[{key.p+glm::vec3(0,1,0)}]->getLightMask() : nullptr);
-                    this->chunks[key]->computeLight(neighbouringChunks, aboveLightMask);  
+                Key2 key2 = { glm::vec4(key.p, 2) };
+                if (this->chunks.find(key) == this->chunks.end() && this->chunksToLoadSet.find(key2) == this->chunksToLoadSet.end()) {
+                    this->chunksToLoadQueue.push(key2);
+                    this->chunksToLoadSet.insert(key2);
                 }
             }
         }
     }
+    // std::cout << this->chunksToLoadQueue.size() << std::endl;
+    // std::cout << "queue size: " << this->chunksToLoadQueue.size() << std::endl;
+    // std::cout << "  set size: " << this->chunksToLoadSet.size() << std::endl;; 
 }
 
 /*  Check in chunks : If chunk is meshed but neighbour just appeared, recompute light and remesh
 */
 
-void    Terrain::generateChunkTextures( void ) {
-    std::forward_list<glm::vec4> toDelete;
+// void    Terrain::generateChunkTextures( void ) {
+//     std::forward_list<glm::vec4> toDelete;
 
-    int chunksGenerated = 0;
-    for (auto it = this->chunksToGenerate.begin(); it != this->chunksToGenerate.end(); ++it) {
-        if (chunksGenerated < this->maxChunksGeneratedPerFrame) {
-            /* generate texture */
-            Key key = { glm::vec3(*it) };
-            glm::vec3 position = key.p * (glm::vec3)this->chunkSize;
-            this->renderChunkGeneration(position, this->dataBuffer);
-            this->chunks.insert( { key, new Chunk(position, this->chunkSize, this->dataBuffer, this->dataMargin) } );
-            toDelete.push_front(*it);
-            chunksGenerated++;
-        }
-        else
-            break;
-    }
-    // if (chunksGenerated != 0) std::cout << "generated : " << chunksGenerated << std::endl; // DEBUG
-    for (auto it = toDelete.begin(); it != toDelete.end(); ++it)
-        this->chunksToGenerate.erase( *it );
-}
+//     int chunksGenerated = 0;
+//     for (auto it = this->chunksToGenerate.begin(); it != this->chunksToGenerate.end(); ++it) {
+//         if (chunksGenerated < this->maxChunksGeneratedPerFrame) {
+//             /* generate texture */
+//             Key key = { glm::vec3(*it) };
+//             glm::vec3 position = key.p * (glm::vec3)this->chunkSize;
+//             this->renderChunkGeneration(position, this->dataBuffer);
+//             this->chunks.insert( { key, new Chunk(position, this->chunkSize, this->dataBuffer, this->dataMargin) } );
+//             toDelete.push_front(*it);
+//             chunksGenerated++;
+//         }
+//         else
+//             break;
+//     }
+//     // if (chunksGenerated != 0) std::cout << "generated : " << chunksGenerated << std::endl; // DEBUG
+//     for (auto it = toDelete.begin(); it != toDelete.end(); ++it)
+//         this->chunksToGenerate.erase( *it );
+// }
 
-void    Terrain::computeChunkLight( void ) {
-    for (auto it = this->chunks.begin(); it != this->chunks.end(); ++it) {
-        Chunk* above = (chunks.find({it->first.p+glm::vec3(0,1,0)}) != chunks.end() ? chunks[{it->first.p+glm::vec3(0,1,0)}] : nullptr);
-        if (!it->second->isLighted() && (it->first.p.y+1 >= 8 || (above != nullptr && above->isLighted())) ) {
-            /* the lightMask is the last vertical slice of the LightMap of previous chunk (must compute it) */
-            std::array<Chunk*, 6> neighbouringChunks = {
-                // nullptr,nullptr,nullptr,nullptr,nullptr,nullptr
-                (chunks.find({it->first.p + glm::vec3(1,0,0)}) != chunks.end() ? chunks[{it->first.p + glm::vec3(1,0,0)}] : nullptr),
-                (chunks.find({it->first.p - glm::vec3(1,0,0)}) != chunks.end() ? chunks[{it->first.p - glm::vec3(1,0,0)}] : nullptr),
-                (chunks.find({it->first.p + glm::vec3(0,1,0)}) != chunks.end() ? chunks[{it->first.p + glm::vec3(0,1,0)}] : nullptr),
-                (chunks.find({it->first.p - glm::vec3(0,1,0)}) != chunks.end() ? chunks[{it->first.p - glm::vec3(0,1,0)}] : nullptr),
-                (chunks.find({it->first.p + glm::vec3(0,0,1)}) != chunks.end() ? chunks[{it->first.p + glm::vec3(0,0,1)}] : nullptr),
-                (chunks.find({it->first.p - glm::vec3(0,0,1)}) != chunks.end() ? chunks[{it->first.p - glm::vec3(0,0,1)}] : nullptr)
-            };
-            // const uint8_t* aboveLightMask = (chunks.find({it->first.p + glm::vec3(0,1,0)}) != chunks.end() ? chunks[{it->first.p + glm::vec3(0,1,0)}]->getLightMask() : nullptr);
-            // it->second->computeWater(neighbouringChunks); // TMP
-            it->second->computeLight(neighbouringChunks, above != nullptr ? above->getLightMask() : nullptr);
-        }
-    }
-}
+// void    Terrain::computeChunkLight( void ) {
+//     for (auto it = this->chunks.begin(); it != this->chunks.end(); ++it) {
+//         Chunk* above = (chunks.find({it->first.p+glm::vec3(0,1,0)}) != chunks.end() ? chunks[{it->first.p+glm::vec3(0,1,0)}] : nullptr);
+//         if (!it->second->isLighted() && (it->first.p.y+1 >= 8 || (above != nullptr && above->isLighted())) ) {
+//             /* the lightMask is the last vertical slice of the LightMap of previous chunk (must compute it) */
+//             std::array<Chunk*, 6> neighbouringChunks = {
+//                 // nullptr,nullptr,nullptr,nullptr,nullptr,nullptr
+//                 (chunks.find({it->first.p + glm::vec3(1,0,0)}) != chunks.end() ? chunks[{it->first.p + glm::vec3(1,0,0)}] : nullptr),
+//                 (chunks.find({it->first.p - glm::vec3(1,0,0)}) != chunks.end() ? chunks[{it->first.p - glm::vec3(1,0,0)}] : nullptr),
+//                 (chunks.find({it->first.p + glm::vec3(0,1,0)}) != chunks.end() ? chunks[{it->first.p + glm::vec3(0,1,0)}] : nullptr),
+//                 (chunks.find({it->first.p - glm::vec3(0,1,0)}) != chunks.end() ? chunks[{it->first.p - glm::vec3(0,1,0)}] : nullptr),
+//                 (chunks.find({it->first.p + glm::vec3(0,0,1)}) != chunks.end() ? chunks[{it->first.p + glm::vec3(0,0,1)}] : nullptr),
+//                 (chunks.find({it->first.p - glm::vec3(0,0,1)}) != chunks.end() ? chunks[{it->first.p - glm::vec3(0,0,1)}] : nullptr)
+//             };
+//             // const uint8_t* aboveLightMask = (chunks.find({it->first.p + glm::vec3(0,1,0)}) != chunks.end() ? chunks[{it->first.p + glm::vec3(0,1,0)}]->getLightMask() : nullptr);
+//             // it->second->computeWater(neighbouringChunks); // TMP
+//             it->second->computeLight(neighbouringChunks, above != nullptr ? above->getLightMask() : nullptr);
+//         }
+//     }
+// }
 
-void    Terrain::generateChunkMeshes( void ) {
-    for (auto it = this->chunks.begin(); it != this->chunks.end(); ++it) {
-        if (!it->second->isMeshed() && it->second->isLighted()) { /* wait for lighting pass */
-            it->second->buildMesh();
-        }
-    }
-}
+// void    Terrain::generateChunkMeshes( void ) {
+//     for (auto it = this->chunks.begin(); it != this->chunks.end(); ++it) {
+//         if (!it->second->isMeshed() && it->second->isLighted()) { /* wait for lighting pass */
+//             it->second->buildMesh();
+//         }
+//     }
+// }
 
 void    Terrain::updateChunks( const glm::vec3& cameraPosition ) {
     this->addChunksToGenerationList(cameraPosition);
-    // this->generateChunkTextures();
-    // tTimePoint lastTime = std::chrono::high_resolution_clock::now();
-    // this->computeChunkLight();
-    // std::cout << (static_cast<tMilliseconds>(std::chrono::high_resolution_clock::now() - lastTime)).count() << std::endl;
-    this->generateChunkMeshes();
+    std::cout << this->chunksToLoadQueue.size() << std::endl;
 
+    /* we have 2 kinds of elements in queue, first pass and second pass elements :
+        in first pass :
+            * we generate terrain
+            * 1st lighting pass
+            * 1st water propagation pass
+        in second pass :
+            * 2nd lighting pass
+            * 2nd water propagation pass
+            * mesh chunk
+    */
+    for (int i = 0; i < this->maxChunksGeneratedPerFrame && chunksToLoadQueue.empty() == false; ) {
+        Key2 key2 = this->chunksToLoadQueue.front();
+        Key key = { glm::vec3(key2.p) };
+        /* delete element in load queue & set */
+        this->chunksToLoadQueue.pop();
+        this->chunksToLoadSet.erase(key2);
+        /* check if element is still in range */
+        float distHorizontal = glm::distance(key.p * glm::vec3(chunkSize) * glm::vec3(1,0,1),  cameraPosition * glm::vec3(1,0,1));
+        if (distHorizontal > renderDistance)
+            continue;
+        i++;
+
+        /* first pass elements */
+        if (key2.p.w == 1) {
+            /* generate terrain and create chunk */
+            glm::vec3 position = key.p * (glm::vec3)this->chunkSize;
+            this->renderChunkGeneration(position, this->dataBuffer);
+            this->chunks.insert( { key, new Chunk(position, this->chunkSize, this->dataBuffer, this->dataMargin) } );
+            /* compute chunk light (first pass) */
+            std::array<Chunk*, 6> neighbouringChunks = {
+                (chunks.find({key.p+glm::vec3(1,0,0)}) != chunks.end() ? chunks[{key.p+glm::vec3(1,0,0)}] : nullptr),
+                (chunks.find({key.p-glm::vec3(1,0,0)}) != chunks.end() ? chunks[{key.p-glm::vec3(1,0,0)}] : nullptr),
+                (chunks.find({key.p+glm::vec3(0,1,0)}) != chunks.end() ? chunks[{key.p+glm::vec3(0,1,0)}] : nullptr),
+                (chunks.find({key.p-glm::vec3(0,1,0)}) != chunks.end() ? chunks[{key.p-glm::vec3(0,1,0)}] : nullptr),
+                (chunks.find({key.p+glm::vec3(0,0,1)}) != chunks.end() ? chunks[{key.p+glm::vec3(0,0,1)}] : nullptr),
+                (chunks.find({key.p-glm::vec3(0,0,1)}) != chunks.end() ? chunks[{key.p-glm::vec3(0,0,1)}] : nullptr)
+            };
+            const uint8_t* aboveLightMask = (chunks.find({key.p+glm::vec3(0,1,0)}) != chunks.end() ? chunks[{key.p+glm::vec3(0,1,0)}]->getLightMask() : nullptr);
+            this->chunks[key]->computeLight(neighbouringChunks, aboveLightMask);
+        }
+        else { /* second pass elements */
+            if (this->chunks.find(key) != this->chunks.end()) {
+                /* compute chunk light (second pass) */
+                std::array<Chunk*, 6> neighbouringChunks = {
+                    (chunks.find({key.p+glm::vec3(1,0,0)}) != chunks.end() ? chunks[{key.p+glm::vec3(1,0,0)}] : nullptr),
+                    (chunks.find({key.p-glm::vec3(1,0,0)}) != chunks.end() ? chunks[{key.p-glm::vec3(1,0,0)}] : nullptr),
+                    (chunks.find({key.p+glm::vec3(0,1,0)}) != chunks.end() ? chunks[{key.p+glm::vec3(0,1,0)}] : nullptr),
+                    (chunks.find({key.p-glm::vec3(0,1,0)}) != chunks.end() ? chunks[{key.p-glm::vec3(0,1,0)}] : nullptr),
+                    (chunks.find({key.p+glm::vec3(0,0,1)}) != chunks.end() ? chunks[{key.p+glm::vec3(0,0,1)}] : nullptr),
+                    (chunks.find({key.p-glm::vec3(0,0,1)}) != chunks.end() ? chunks[{key.p-glm::vec3(0,0,1)}] : nullptr)
+                };
+                const uint8_t* aboveLightMask = (chunks.find({key.p+glm::vec3(0,1,0)}) != chunks.end() ? chunks[{key.p+glm::vec3(0,1,0)}]->getLightMask() : nullptr);
+                this->chunks[key]->computeLight(neighbouringChunks, aboveLightMask);
+                /* mesh chunk */
+                this->chunks[key]->buildMesh();
+            }
+        }
+    }
     this->deleteOutOfRangeChunks();
 }
+
+// void    Terrain::updateChunks( const glm::vec3& cameraPosition ) {
+//     this->addChunksToGenerationList(cameraPosition);
+//     this->generateChunkTextures();
+//     this->computeChunkLight();
+//     this->generateChunkMeshes();
+//     this->deleteOutOfRangeChunks();
+// }
 
 void    Terrain::deleteOutOfRangeChunks( void ) {
     std::forward_list<Key> toDelete;
