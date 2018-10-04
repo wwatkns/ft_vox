@@ -184,6 +184,8 @@ void    Terrain::addChunksToGenerationList( const glm::vec3& cameraPosition ) {
     }
 }
 
+/*  Check in chunks : If chunk is meshed but neighbour just appeared, recompute light and remesh
+*/
 
 void    Terrain::generateChunkTextures( void ) {
     std::forward_list<glm::vec4> toDelete;

@@ -98,11 +98,11 @@ void    Renderer::renderMeshes( void ) {
 
     this->env->getTerrain()->renderChunks(*this->shader["default"], this->camera);
 
-    static bool check = false;
-    if (!check) {
+    // static bool check = false;
+    // if (!check) {
         this->env->getTerrain()->updateChunks(this->camera.getPosition());
-        check = true;
-    }
+        // check = true;
+    // }
     
     /* copy the depth buffer to a texture (used in raymarch shader for geometry occlusion of raymarched objects) */
     // glBindTexture(GL_TEXTURE_2D, this->depthMap.id);
