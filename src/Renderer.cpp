@@ -34,6 +34,7 @@ void	Renderer::loop( void ) {
         glfwPollEvents();
         this->env->getController()->update();
         this->camera.handleInputs(this->env->getController()->getKeys(), this->env->getController()->getMouse());
+        tTimePoint lastTime = std::chrono::high_resolution_clock::now();
 
         if (this->fxaa) {
             /* two pass rendering (for FXAA) */
@@ -57,9 +58,8 @@ void	Renderer::loop( void ) {
         }
         glfwSwapBuffers(this->env->getWindow().ptr);
         /* test, update the chunks after rendering */
-            tTimePoint lastTime = std::chrono::high_resolution_clock::now();
         this->env->getTerrain()->updateChunks(this->camera.getPosition());
-            std::cout << (static_cast<tMilliseconds>(std::chrono::high_resolution_clock::now() - lastTime)).count() << std::endl;
+        // std::cout << (static_cast<tMilliseconds>(std::chrono::high_resolution_clock::now() - lastTime)).count() << std::endl;
 
         /* DEBUG */
 

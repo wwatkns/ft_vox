@@ -66,11 +66,11 @@ void    Camera::handleInputs( const std::array<tKey, N_KEY>& keys, const tMouse&
     this->viewMatrix = glm::lookAt(this->position, this->position + this->cameraFront, glm::vec3(0, 1, 0));
     this->viewProjectionMatrix = this->projectionMatrix * this->viewMatrix;
     this->invViewMatrix = glm::inverse(this->viewMatrix);
-    this->last = std::chrono::steady_clock::now();
 
     if (this->updateFustrum)
         this->updateFustrumPlanes();
     this->updateFustrum = false;
+    this->last = std::chrono::steady_clock::now();
 }
 
 void    Camera::handleKeys( const std::array<tKey, N_KEY>& keys ) {

@@ -241,12 +241,12 @@ void    Chunk::computeLight( std::array<Chunk*, 6> neighbouringChunks, const uin
     if (this->lightPasses == 0) { /* only do on first pass */
         if (aboveLightMask != nullptr) { // the lightMask of the chunk above
             memcpy(lightMask, aboveLightMask, this->y_step); // copies the mask as current lightMask
-            // if (isMaskZero(aboveLightMask)) { // if no light is present, skip
-            //     this->underground = true;
-            //     this->lighted = true;
-            //     this->lightPasses++;
-            //     return ;
-            // }
+            if (isMaskZero(aboveLightMask)) { // if no light is present, skip
+                this->underground = true;
+                this->lighted = true;
+                this->lightPasses++;
+                return ;
+            }
         }
         /* first pass (/!\ DON'T TOUCH, IT'S PERFECT) */
         for (int y = chunkSize.y; y >= 0; --y)
@@ -285,20 +285,12 @@ void    Chunk::computeLight( std::array<Chunk*, 6> neighbouringChunks, const uin
                     }
                 }
             }
-    /* count number of neighbours */
-    // int count = 0;
-    // for (int i = 0; i < 6; i++)
-    //     if (neighbouringChunks[i] == nullptr)
-    //         count++;
-    // std::cout << "empty neighbours: " << count << std::endl;
-
     /* propagation pass */
     while (lightNodes.empty() == false) {
         int index = lightNodes.front();
         lightNodes.pop();
         int currentLight = this->lightMap[index];
         for (int side = 0; side < 6; side++) {
-            // if (!isBorder(index + offset[side])) {
                 /* if block is opaque and light value is at least 2 under current light */
                 if (this->texture[index + offset[side]] == 0 && this->lightMap[index + offset[side]] + 2 <= currentLight) {
                     this->lightMap[index + offset[side]] = currentLight - 1;
