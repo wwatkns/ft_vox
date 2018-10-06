@@ -129,7 +129,8 @@ float   map(vec3 p) {
 
     /* water source */
     // int g15= int(fbm3d(p, 0.2, 0.009, 4, 0.0, 0.7) > 0.5);
-    int g15= int(fbm3d(p, 0.055, 0.05, 4, 2.0, 1.5) > (p.y/255.)  );//p.y / 340.);
+    // int g15= int(fbm3d(p, 0.055, 0.05, 4, 2.0, 1.5) > (p.y/255.)  );//p.y / 340.);
+    int g15= int(p.y == 85) * (g2 & g13);
 
     res = float(g0 & g1 & g2 & g13) * DIRT;
 
@@ -158,7 +159,8 @@ void    main() {
     float z = mod(floor(uv.y * chunkSize.y * chunkSize.z), chunkSize.z);
     vec3 pos = vec3(c_uv, z);
 
-    if ((0 < pos.x && pos.x < 35) && (0 < pos.y && pos.y < 35) && (0 < pos.z && pos.z < 35)) { /* ignore outer margins */
+    ivec3 border = ivec3(chunkSize-1);
+    if ((margin/2-1 <= pos.x && pos.x < border.x) && (margin/2-1 <= pos.y && pos.y < border.y) && (margin/2-1 <= pos.z && pos.z < border.z)) { /* ignore outer margins */
         vec3 worldPos = (chunkPosition + pos - margin*0.5);
         FragColor.r = sqrt(map(worldPos)); // values from [0..255] (0..1) are in normalized fixed-point representation, a simple sqrt() fixes that.
     }

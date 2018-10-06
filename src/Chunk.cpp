@@ -6,6 +6,7 @@ Chunk::Chunk( const glm::vec3& position, const glm::ivec3& chunkSize, const uint
     this->paddedSize = chunkSize + static_cast<int>(margin);
     this->y_step = paddedSize.x * paddedSize.z;
     this->lightPasses = 0;
+    this->lightComplete = false;
 
     this->texture = static_cast<uint8_t*>(malloc(sizeof(uint8_t) * paddedSize.x * paddedSize.y * paddedSize.z));
     memcpy(this->texture, texture, paddedSize.x * paddedSize.y * paddedSize.z);
@@ -160,9 +161,20 @@ glm::ivec2  Chunk::getVerticesAoValue( int i, uint8_t visibleFaces ) const {
     );
 }
 
+void    Chunk::rebuildMesh( void ) {
+    this->voxelsOpaque.clear();
+    this->voxelsTransparent.clear();
+    glDeleteBuffers(1, &this->vaoOpaqueMesh);
+    glDeleteBuffers(1, &this->vboOpaqueMesh);
+    glDeleteBuffers(1, &this->vaoTransparentMesh);
+    glDeleteBuffers(1, &this->vboTransparentMesh);
+    this->buildMesh();
+}
+
 void    Chunk::buildMesh( void ) {
     const int m = this->margin / 2;
     this->voxelsOpaque.reserve(chunkSize.x * chunkSize.y * chunkSize.z);
+    this->voxelsTransparent.reserve(chunkSize.x * chunkSize.y * chunkSize.z);
 
     for (int y = chunkSize.y-1; y >= 0; --y)
         for (int z = 0; z < chunkSize.z; ++z)
@@ -173,7 +185,7 @@ void    Chunk::buildMesh( void ) {
                     uint8_t visibleFaces = getVisibleFaces(i);
                     uint8_t b = static_cast<uint8_t>(this->texture[i] - 1);
                     /* change dirt to grass on top */
-                    if (texture[i] == 1 && texture[i + this->y_step] == 0 && !this->underground) // && lightMap[i + this->y_step] > 2)
+                    if (texture[i] == 1 && texture[i + this->y_step] == 0 && lightMap[i + this->y_step] > 1)
                         b = 1;
                     glm::ivec2 ao = getVerticesAoValue(i, visibleFaces);
                     int light = ((int)lightMap[i + 1           ] << 20) | ((int)lightMap[i - 1           ] << 16) |
@@ -181,7 +193,7 @@ void    Chunk::buildMesh( void ) {
                                 ((int)lightMap[i + this->y_step] <<  4) | ((int)lightMap[i - this->y_step]);
                     this->voxelsOpaque.push_back( (tPoint){ glm::vec3(x, y, z), ao, b, visibleFaces, light } );
                 }
-                else if (this->texture[i] == 15 && !isVoxelCulledTransparent(i)) { /* if voxel is transparent but not air */
+                else if (this->texture[i] == 15 && !isVoxelCulledTransparent(i)) { /* if voxel is water */
                     uint8_t visibleFaces = 0x03;
                     uint8_t b = static_cast<uint8_t>(this->texture[i] - 1);
                     glm::ivec2 ao = getVerticesAoValue(i, visibleFaces);
@@ -204,23 +216,6 @@ const bool  Chunk::isBorder( int i ) {
             i % this->y_step >= this->y_step - paddedSize.x * m || /* front border */
             i % (this->y_step * paddedSize.y) < this->y_step * m || /* top border */
             i % (this->y_step * paddedSize.y) >= this->y_step * paddedSize.y - this->y_step * m); /* bottom border */
-}
-
-const int   Chunk::getBorderId( int i ) {
-    const int m = this->margin / 2;
-    if (i % paddedSize.x < m) /* left border */
-        return 1;
-    if (i % paddedSize.x >= chunkSize.x + m) /* right border */
-        return 0;
-    if (i % this->y_step < paddedSize.x * m) /* back border */
-        return 5;
-    if (i % this->y_step >= this->y_step - paddedSize.x * m) /* front border */
-        return 4;
-    if (i % (this->y_step * paddedSize.y) < this->y_step * m) /* top border */
-        return 3;
-    if (i % (this->y_step * paddedSize.y) >= this->y_step * paddedSize.y - this->y_step * m) /* bottom border */
-        return 2;
-    return 6;
 }
 
 const bool  Chunk::isMaskZero( const uint8_t* mask ) {
@@ -248,16 +243,24 @@ void    Chunk::computeLight( std::array<Chunk*, 6> neighbouringChunks, const uin
                 return ;
             }
         }
-        /* first pass (/!\ DON'T TOUCH, IT'S PERFECT) */
+        /* first pass */
         for (int y = chunkSize.y; y >= 0; --y)
             for (int z = -1; z < chunkSize.z+1; ++z)
                 for (int x = -1; x < chunkSize.x+1; ++x) {
                     int j = (x+m) + (z+m) * paddedSize.x;
                     int i = j + (y+m) * this->y_step;
-                    if (isVoxelTransparent(i) && (this->lightMask[j] == 15) ) { /* if voxel is transparent, and voxel above also */
+                    /* if voxel is transparent, has full light and has a transparent neighbour with no light */
+                    if (isVoxelTransparent(i) && (this->lightMask[j] == 15) && (
+                       (isVoxelTransparent(i+1           ) && (this->lightMask[j+1           ] == 0)) ||
+                       (isVoxelTransparent(i-1           ) && (this->lightMask[j-1           ] == 0)) ||
+                       (isVoxelTransparent(i+paddedSize.x) && (this->lightMask[j+paddedSize.x] == 0)) ||
+                       (isVoxelTransparent(i-paddedSize.x) && (this->lightMask[j-paddedSize.x] == 0))))
+                    {
                         lightMask[j] = 15;
-                        lightNodes.push(i); /* optimization idea: add node only if 1 or more neighbouring voxel light is 0 (but transparent) */
+                        lightNodes.push(i);
                     }
+                    else if (isVoxelTransparent(i) && (this->lightMask[j] == 15))
+                        lightMask[j] = 15;
                     else /* if voxel is opaque */
                         lightMask[j] = 0;
                     lightMap[i] = lightMask[j];
@@ -266,19 +269,19 @@ void    Chunk::computeLight( std::array<Chunk*, 6> neighbouringChunks, const uin
     const std::array<int, 6> offset = { 1, -1, this->y_step, -this->y_step, paddedSize.x, -paddedSize.x };
     const std::array<int, 6> offsetInv = { -chunkSize.x, chunkSize.x, -this->y_step * chunkSize.y, this->y_step * chunkSize.y, -paddedSize.x * chunkSize.z, paddedSize.x * chunkSize.z };
     /* create nodes from neighbouring chunks */
-    for (int y = chunkSize.y; y >= 0; --y)
+    for (int y = chunkSize.y; y >= -1; --y)
         for (int z = -1; z < chunkSize.z+1; ++z)
             for (int x = -1; x < chunkSize.x+1; ++x) {
                 int i = (x+m) + (z+m) * paddedSize.x + (y+m) * this->y_step;
                 if (x == -1 || y == -1 || z == -1 || x == chunkSize.x || y == chunkSize.y || z == chunkSize.z) {
                     int side = 6;
                     if (x == chunkSize.x) side = 0; else if (x == -1) side = 1;
-                    if (y == chunkSize.y) side = 2; else if (y == -1) side = 3;
+                    if (y == chunkSize.y) side = 2;
                     if (z == chunkSize.z) side = 4; else if (z == -1) side = 5;
 
                     if (neighbouringChunks[side] != nullptr && side != 6) {
                         int currentLight = (int)neighbouringChunks[side]->getLightMap()[i + offsetInv[side] + offset[side]];
-                        if (this->texture[i] == 0 && this->lightMap[i] + 2 <= currentLight) {
+                        if (isVoxelTransparent(i) && this->lightMap[i] + 2 <= currentLight) {
                             this->lightMap[i] = currentLight - 1;
                             lightNodes.push(i);
                         }
@@ -291,30 +294,25 @@ void    Chunk::computeLight( std::array<Chunk*, 6> neighbouringChunks, const uin
         lightNodes.pop();
         int currentLight = this->lightMap[index];
         for (int side = 0; side < 6; side++) {
-                /* if block is opaque and light value is at least 2 under current light */
-                if (this->texture[index + offset[side]] == 0 && this->lightMap[index + offset[side]] + 2 <= currentLight) {
-                    this->lightMap[index + offset[side]] = currentLight - 1;
-                    lightNodes.push(index + offset[side]);
-                }
+            /* if block is opaque and light value is at least 2 under current light */
+            if (isVoxelTransparent(index + offset[side]) && this->lightMap[index + offset[side]] + 2 <= currentLight) {
+                this->lightMap[index + offset[side]] = currentLight - 1;
+                lightNodes.push(index + offset[side]);
+            }
         }
     }
+    // if (this->lightPasses == 1 && neighbouringChunks[0] != nullptr && neighbouringChunks[1] != nullptr &&
+    //     neighbouringChunks[2] != nullptr && neighbouringChunks[4] != nullptr && neighbouringChunks[5] != nullptr)
+    //     this->lightComplete = true;
     this->lighted = true;
     this->lightPasses++;
 }
 
-/* it's not working because :
-   if we have a chunk devoid of water source and computeWater(), then render the neighbour chunk that
-   have a water source and will propagate to this one, the computation is already done, so water will
-   not propagate to this chunk.
-   -> We should keep track of neighbour chunks, when then have computed their water, we can recompute
-      ours. That will introduce a remeshing though... Or instead we could mesh only when all neighbouring
-      chunks have computed water and we recomputed water. (same applies for lighting) */
 void    Chunk::computeWater( std::array<Chunk*, 6> neighbouringChunks ) {
     const int m = this->margin / 2;
     std::queue<int>   waterNodes;
 
     const std::array<int, 6> offset = { 1, -1, this->y_step, -this->y_step, paddedSize.x, -paddedSize.x };
-    // const std::array<int, 6> offsetInv = { -chunkSize.x, chunkSize.x, -this->y_step * chunkSize.y, this->y_step * chunkSize.y, -paddedSize.x * chunkSize.z, paddedSize.x * chunkSize.z };
     const std::array<int, 6> offsetInv = { -chunkSize.x, chunkSize.x, -this->y_step * chunkSize.y, this->y_step * chunkSize.y, -paddedSize.x * chunkSize.z, paddedSize.x * chunkSize.z };
 
     /* initial pass to add nodes generated in texture */
@@ -322,52 +320,32 @@ void    Chunk::computeWater( std::array<Chunk*, 6> neighbouringChunks ) {
         for (int z = -1; z < chunkSize.z+1; ++z)
             for (int x = -1; x < chunkSize.x+1; ++x) {
                 int i = (x+m) + (z+m) * paddedSize.x + (y+m) * this->y_step;
-                if (!isBorder(i)) {
-                    if (this->texture[i] == 15) /* if voxel is water source, add node */
-                        waterNodes.push(i);
-                }
-                else { /* handle neighbouring chunks */
-                    // int side = getBorderId(i);
+                /* handle neighbouring chunks */
+                if (x == -1 || y == -1 || z == -1 || x == chunkSize.x || y == chunkSize.y || z == chunkSize.z) {
                     int side = 6;
-                    if (x == chunkSize.x) side = 0;
-                    else if (x == -1) side = 1;
-                    if (y == chunkSize.y) side = 2;
-                    if (z == chunkSize.x) side = 4;
-                    else if (z == -1) side = 5;
+                    if (x == chunkSize.x) side = 0; else if (x == -1) side = 1;
+                    if (y == chunkSize.y) side = 2; else if (y == -1) side = 3;
+                    if (z == chunkSize.z) side = 4; else if (z == -1) side = 5;
 
                     if (neighbouringChunks[side] != nullptr && side < 6) {
-                        // int value = (int)neighbouringChunks[side]->getTexture()[i + offsetInv[side] - offset[side]];
-                        int value = (int)neighbouringChunks[side]->getTexture()[i + offsetInv[side]];
-                        if (value == 15) {
+                        if ((int)neighbouringChunks[side]->getTexture()[i + offsetInv[side]] == 15) {
                             this->texture[i] = 15;
                             waterNodes.push(i);
                         }
                     }
                 }
+                else if (this->texture[i] == 15) /* if voxel is water source, add node */
+                    waterNodes.push(i);
             }
     /* propagation pass */
     while (waterNodes.empty() == false) {
         int index = waterNodes.front();
         waterNodes.pop();
-
         for (int side = 0; side < 6; side++) {
-            // if (!isBorder(index + offset[side])) {
-                /* if block is opaque and light value is at least 2 under current light */
-                if (side != 2 && this->texture[index + offset[side]] == 0) { /* propagate water on air blocks */
-                    this->texture[index + offset[side]] = 15;
-                    waterNodes.push(index + offset[side]);
-                }
-            // }
-            // else { /* we're on a chunk border */
-            //     int value = this->texture[index + offset[side]];
-            //     if (neighbouringChunks[side] != nullptr && side != 2 && side != 3)
-            //         value = (int)neighbouringChunks[side]->getTexture()[ (index + offsetInv[side]) - offset[side] ];
-                
-            //     if (this->texture[index + offset[side]] == 0 && value == 15) {
-            //         this->texture[index + offset[side]] = 15;
-            //         waterNodes.push(index + offset[side]);
-            //     }
-            // }
+            if (side != 2 && this->texture[index + offset[side]] == 0) { /* propagate water on air blocks */
+                this->texture[index + offset[side]] = 15;
+                waterNodes.push(index + offset[side]);
+            }
         }
     }
 }
@@ -399,7 +377,7 @@ void    Chunk::render( Shader shader, Camera& camera, GLuint textureAtlas, uint 
         if (this->voxelsTransparent.size() > 0) {
             /* perform small offset of mesh to have waterline a bit lower */
             glm::mat4 newTransform = this->transform;
-            newTransform = glm::translate(newTransform, glm::vec3(0, -0.25, 0)); /* ISSUE: with face culling if we offset down or up */
+            // newTransform = glm::translate(newTransform, glm::vec3(0, -0.25, 0)); /* ISSUE: with face culling if we offset down or up */
             shader.setMat4UniformValue("_mvp", camera.getViewProjectionMatrix() * newTransform);
             shader.setMat4UniformValue("_model", newTransform);
 

@@ -34,6 +34,7 @@ public:
     ~Chunk( void );
 
     void                buildMesh( void );
+    void                rebuildMesh( void );
 
     void                computeWater( std::array<Chunk*, 6> neighbouringChunks ); // TMP
     void                computeLight( std::array<Chunk*, 6> neighbouringChunks, const uint8_t* aboveLightMask, bool intermediary = false );
@@ -52,8 +53,8 @@ public:
     const bool          isBorder( int i );
     const bool          isMaskZero( const uint8_t* mask );
 
-    const int           getBorderId( int i );
     int                 lightPasses; // NEW TMP
+    bool                lightComplete;
 
 private:
     GLuint              vaoOpaqueMesh;        // Vertex Array Object
@@ -61,6 +62,7 @@ private:
     GLuint              vaoTransparentMesh;   // Vertex Array Object
     GLuint              vboTransparentMesh;   // Vertex Buffer Object
 
+    /* using heap allocated pointer to type is slightly faster, but messier (~80ms win on 800 chunks, so 0.1ms/chunk) */
     std::vector<tPoint> voxelsOpaque;      // the list of opaque voxels created in Terrain
     std::vector<tPoint> voxelsTransparent; // the list of transparent voxels created in Terrain
 
