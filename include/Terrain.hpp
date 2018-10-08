@@ -14,13 +14,8 @@
 #include <array>
 #include <forward_list>
 #include <unordered_map>
-#include <map>
-#include <queue>
-#include <set>
 #include <unordered_set>
-#include <thread>
-#include <mutex>
-// #include <tbb.h>
+#include <queue>
 
 #include "Exception.hpp"
 #include "Shader.hpp"
@@ -28,23 +23,23 @@
 #include "utils.hpp"
 #include "Chunk.hpp"
 
-typedef struct  sVertex {
+typedef struct  vertex_s {
     glm::vec3   Position;
     glm::vec2   TexCoords;
-}               tVertex;
+}               vertex_t;
 
-typedef struct  sMesh {
+typedef struct  mesh_quad_s {
     GLuint  vao;
     GLuint  vbo;
     GLuint  ebo;
-}               tMesh;
+}               mesh_quad_t;
 
-typedef struct  sRenderBuffer {
+typedef struct  framebuffer_s {
     unsigned int    id;
     unsigned int    fbo;
     size_t          width;
     size_t          height;
-}               tRenderBuffer;
+}               framebuffer_t;
 
 /* structure and compare function for rendering chunks */
 typedef struct  chunkSort_s {
@@ -59,16 +54,16 @@ struct {
 } chunkRenderingCompareSort;
 
 /* key and keyhash for chunks storing (unordered_map is good for storage of chunks) */
-struct  Key {
+struct ckey_t {
     glm::vec3   p;
-    bool operator==(const Key &other) const {
+    bool operator==(const ckey_t &other) const {
         return (p.x == other.p.x && p.y == other.p.y && p.z == other.p.z);
     }
 };
 
 struct KeyHash {
     /* /!\ positions are stored as 16 bits integers, so world position should not go further than 2^15 = 32768 chunks in any direction, or 1,048,576 blocks */
-    uint64_t operator()(const Key &k) const {
+    uint64_t operator()(const ckey_t &k) const {
         uint64_t    hash = 0;
         hash |= static_cast<uint64_t>(static_cast<int>(k.p.x) + 0x7FFF);
         hash |= static_cast<uint64_t>(static_cast<int>(k.p.y) + 0x7FFF) << 16;
@@ -83,10 +78,7 @@ struct  setChunkRenderCompare {
     }
 };
 
-enum class updateType {
-    water,
-    light
-};
+enum class updateType { water, light };
 
 typedef struct  update_s {
     glm::vec3   chunk;
@@ -112,18 +104,18 @@ public:
     std::array<Chunk*, 6>       getNeighbouringChunks( const glm::vec3& position );
 
 private:
-    std::unordered_map<Key, Chunk*, KeyHash>    chunks;
-    std::unordered_set<Key, KeyHash>            chunksToLoadSet; // need to to easy check if chunk is present in queue
-    std::queue<Key>                             chunksToLoadQueue; // queue to have ordered chunk lookup
+    std::unordered_map<ckey_t, Chunk*, KeyHash>    chunks;
+    std::unordered_set<ckey_t, KeyHash>            chunksToLoadSet; // need to to easy check if chunk is present in queue
+    std::queue<ckey_t>                             chunksToLoadQueue; // queue to have ordered chunk lookup
     std::queue<update_t>                        chunksToUpdateQueue; // TMP
 
-    float                                       maxAllocatedTimePerFrame;
+    float                       maxAllocatedTimePerFrame;
     glm::ivec3                  chunkSize;
     uint                        renderDistance; /* in blocs */
     uint                        maxHeight;
     Shader*                     chunkGenerationShader;
-    tMesh                       chunkGenerationRenderingQuad;
-    tRenderBuffer               chunkGenerationFbo;
+    mesh_quad_t                      chunkGenerationRenderingQuad;
+    framebuffer_t               chunkGenerationFbo;
     GLuint                      noiseSampler;
     GLuint                      textureAtlas;
     uint8_t*                    dataBuffer;

@@ -19,13 +19,19 @@
 #include "utils.hpp"
 
 /* we could optimize that */
-typedef struct  sPoint {
+typedef struct  point_s {
     glm::vec3   position;
     glm::ivec2  ao;
     uint8_t     id;
     uint8_t     visibleFaces;
     int         light; // for now we have infos about which faces receiving light (4bits of info for 6 faces, 24bits used)
-}               tPoint;
+}               point_t;
+
+typedef struct  mesh_s {
+    GLuint               vao;
+    GLuint               vbo;
+    std::vector<point_t> voxels;
+}               mesh_t;
 
 class Chunk {
 
@@ -36,9 +42,8 @@ public:
     void                buildMesh( void );
     void                rebuildMesh( void );
 
-    void                computeWater( std::array<Chunk*, 6> neighbouringChunks ); // TMP
-    void                computeLight( std::array<Chunk*, 6> neighbouringChunks, const uint8_t* aboveLightMask, bool intermediary = false );
-    // void                computeLight( std::array<const uint8_t*, 6> neighbouringChunks, const uint8_t* aboveLightMask );
+    void                computeWater( std::array<Chunk*, 6> neighbouringChunks );
+    void                computeLight( std::array<Chunk*, 6> neighbouringChunks, const uint8_t* aboveLightMask );
     void                render( Shader shader, Camera& camera, GLuint textureAtlas, uint renderDistance, int underwater );
     /* getters */
     const glm::vec3&    getPosition( void ) const { return position; };
@@ -53,21 +58,13 @@ public:
     const bool          isBorder( int i );
     const bool          isMaskZero( const uint8_t* mask );
 
-    int                 lightPasses; // TMP
-    bool                lightComplete;
     int                 waterOnBorders; // TMP
     int                 lightOnBorders; // TMP
 
 private:
-    GLuint              vaoOpaqueMesh;        // Vertex Array Object
-    GLuint              vboOpaqueMesh;        // Vertex Buffer Object
-    GLuint              vaoTransparentMesh;   // Vertex Array Object
-    GLuint              vboTransparentMesh;   // Vertex Buffer Object
-
     /* using heap allocated pointer to type is slightly faster, but messier (~80ms win on 800 chunks, so 0.1ms/chunk) */
-    std::vector<tPoint> voxelsOpaque;      // the list of opaque voxels created in Terrain
-    std::vector<tPoint> voxelsTransparent; // the list of transparent voxels created in Terrain
-
+    mesh_t              mesh_opaque;
+    mesh_t              mesh_transparent;
     glm::mat4           transform;  // the transform of the chunk (its world position)
     glm::vec3           position;
     glm::ivec3          chunkSize;  /* the chunk size */
@@ -80,10 +77,10 @@ private:
     bool                lighted;
     bool                underground;
     bool                outOfRange;
+    bool                firstLightPass;
     int                 y_step;
 
-    void                setupMeshOpaque( int mode );
-    void                setupMeshTransparent( int mode );
+    void                setupMesh( mesh_t* mesh, int mode );
 
     void                createModelTransform( const glm::vec3& position );
     const bool          isVoxelTransparent( int i ) const;
@@ -107,8 +104,4 @@ private:
 */
 
 // TODO : implement occlusion culling (don't render chunks that are occluded entirely by other chunks)
-// TODO : implement front to back rendering (so we keep the chunk in some kind of tree to know which ones are the closest)
 // TODO : implement multi-threading for chunk generation and meshing (we'll see when it becomes a bottleneck)
-
-// TODO : chunk management : have a chunksToLoad list, and a maximum number of chunks to generate per frame, that way we can
-//        avoid having big framerate hit in some situations

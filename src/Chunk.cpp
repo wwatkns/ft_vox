@@ -5,10 +5,9 @@ Chunk::Chunk( const glm::vec3& position, const glm::ivec3& chunkSize, const uint
     this->createModelTransform(position);
     this->paddedSize = chunkSize + static_cast<int>(margin);
     this->y_step = paddedSize.x * paddedSize.z;
-    this->lightPasses = 0;
     this->waterOnBorders = 0;
     this->lightOnBorders = 0;
-    this->lightComplete = false;
+    this->firstLightPass = true;
 
     this->texture = static_cast<uint8_t*>(malloc(sizeof(uint8_t) * paddedSize.x * paddedSize.y * paddedSize.z));
     memcpy(this->texture, texture, paddedSize.x * paddedSize.y * paddedSize.z);
@@ -21,18 +20,18 @@ Chunk::Chunk( const glm::vec3& position, const glm::ivec3& chunkSize, const uint
 }
 
 Chunk::~Chunk( void ) {
-    this->voxelsOpaque.clear();
-    this->voxelsTransparent.clear();
+    this->mesh_opaque.voxels.clear();
+    this->mesh_transparent.voxels.clear();
     free(this->texture);
     this->texture = nullptr;
     free(this->lightMask);
     this->lightMask = nullptr;
     free(this->lightMap);
     this->lightMap = nullptr;
-    glDeleteBuffers(1, &this->vaoOpaqueMesh);
-    glDeleteBuffers(1, &this->vboOpaqueMesh);
-    glDeleteBuffers(1, &this->vaoTransparentMesh);
-    glDeleteBuffers(1, &this->vboTransparentMesh);
+    glDeleteBuffers(1, &this->mesh_opaque.vao);
+    glDeleteBuffers(1, &this->mesh_opaque.vbo);
+    glDeleteBuffers(1, &this->mesh_transparent.vao);
+    glDeleteBuffers(1, &this->mesh_transparent.vbo);
 }
 
 const bool  Chunk::isVoxelTransparent( int i ) const {
@@ -165,20 +164,20 @@ glm::ivec2  Chunk::getVerticesAoValue( int i, uint8_t visibleFaces ) const {
 
 void    Chunk::rebuildMesh( void ) {
     if (this->meshed == true) {
-        this->voxelsOpaque.clear();
-        this->voxelsTransparent.clear();
-        glDeleteBuffers(1, &this->vaoOpaqueMesh);
-        glDeleteBuffers(1, &this->vboOpaqueMesh);
-        glDeleteBuffers(1, &this->vaoTransparentMesh);
-        glDeleteBuffers(1, &this->vboTransparentMesh);
+        this->mesh_opaque.voxels.clear();
+        this->mesh_transparent.voxels.clear();
+        glDeleteBuffers(1, &this->mesh_opaque.vao);
+        glDeleteBuffers(1, &this->mesh_opaque.vbo);
+        glDeleteBuffers(1, &this->mesh_transparent.vao);
+        glDeleteBuffers(1, &this->mesh_transparent.vbo);
     }
     this->buildMesh();
 }
 
 void    Chunk::buildMesh( void ) {
     const int m = this->margin / 2;
-    this->voxelsOpaque.reserve(chunkSize.x * chunkSize.y * chunkSize.z);
-    this->voxelsTransparent.reserve(chunkSize.x * chunkSize.y * chunkSize.z);
+    this->mesh_opaque.voxels.reserve(chunkSize.x * chunkSize.y * chunkSize.z);
+    this->mesh_transparent.voxels.reserve(chunkSize.x * chunkSize.y * chunkSize.z);
 
     for (int y = chunkSize.y-1; y >= 0; --y)
         for (int z = 0; z < chunkSize.z; ++z)
@@ -195,20 +194,20 @@ void    Chunk::buildMesh( void ) {
                     int light = ((int)lightMap[i + 1           ] << 20) | ((int)lightMap[i - 1           ] << 16) |
                                 ((int)lightMap[i + paddedSize.x] << 12) | ((int)lightMap[i - paddedSize.x] <<  8) |
                                 ((int)lightMap[i + this->y_step] <<  4) | ((int)lightMap[i - this->y_step]);
-                    this->voxelsOpaque.push_back( (tPoint){ glm::vec3(x, y, z), ao, b, visibleFaces, light } );
+                    this->mesh_opaque.voxels.push_back( (point_t){ glm::vec3(x, y, z), ao, b, visibleFaces, light } );
                 }
-                else if (this->texture[i] == 15){// && !isVoxelCulledTransparent(i)) { /* if voxel is water */
+                else if (this->texture[i] == 15) {// && !isVoxelCulledTransparent(i)) { /* if voxel is water */
                     uint8_t visibleFaces = 255;//0x03;
                     uint8_t b = static_cast<uint8_t>(this->texture[i] - 1);
                     glm::ivec2 ao = getVerticesAoValue(i, visibleFaces);
                     int light = ((int)lightMap[i + 1           ] << 20) | ((int)lightMap[i - 1           ] << 16) |
                                 ((int)lightMap[i + paddedSize.x] << 12) | ((int)lightMap[i - paddedSize.x] <<  8) |
                                 ((int)lightMap[i + this->y_step] <<  4) | ((int)lightMap[i - this->y_step]);
-                    this->voxelsTransparent.push_back( (tPoint){ glm::vec3(x, y, z), ao, b, visibleFaces, light } );
+                    this->mesh_transparent.voxels.push_back( (point_t){ glm::vec3(x, y, z), ao, b, visibleFaces, light } );
                 }
             }
-    this->setupMeshOpaque(GL_STATIC_DRAW);
-    this->setupMeshTransparent(GL_STATIC_DRAW);
+    this->setupMesh(&this->mesh_opaque, GL_STATIC_DRAW);
+    this->setupMesh(&this->mesh_transparent, GL_STATIC_DRAW);
     this->meshed = true;
 }
 
@@ -233,17 +232,18 @@ const bool  Chunk::isMaskZero( const uint8_t* mask ) {
     return !b;
 }
 
-void    Chunk::computeLight( std::array<Chunk*, 6> neighbouringChunks, const uint8_t* aboveLightMask, bool intermediary ) {
+void    Chunk::computeLight( std::array<Chunk*, 6> neighbouringChunks, const uint8_t* aboveLightMask ) {
     const int m = this->margin / 2;
     std::queue<int>   lightNodes;
+    // static bool firstPass = true;
 
-    if (this->lightPasses == 0) { /* only do on first pass */
-        if (aboveLightMask != nullptr) { // the lightMask of the chunk above
-            memcpy(lightMask, aboveLightMask, this->y_step); // copies the mask as current lightMask
+    if (this->firstLightPass == true) { /* only do on first pass */
+        if (aboveLightMask != nullptr) {
+            memcpy(lightMask, aboveLightMask, this->y_step);
             if (isMaskZero(aboveLightMask)) { // if no light is present, skip
                 this->underground = true;
                 this->lighted = true;
-                this->lightPasses++;
+                this->firstLightPass = false;
                 return ;
             }
         }
@@ -303,14 +303,14 @@ void    Chunk::computeLight( std::array<Chunk*, 6> neighbouringChunks, const uin
             if (isVoxelTransparent(index + offset[side]) && this->lightMap[index + offset[side]] + 2 <= currentLight) {
                 this->lightMap[index + offset[side]] = currentLight - 1;
                 lightNodes.push(index + offset[side]);
-
+                /* set bits for sides that are updated */
                 if (isBorder(index + offset[side]))
                     this->lightOnBorders |= (0x1 << side);
             }
         }
     }
     this->lighted = true;
-    this->lightPasses++;
+    this->firstLightPass = false;
 }
 
 void    Chunk::computeWater( std::array<Chunk*, 6> neighbouringChunks ) {
@@ -339,7 +339,13 @@ void    Chunk::computeWater( std::array<Chunk*, 6> neighbouringChunks ) {
                         }
                     }
                 }
-                else if (this->texture[i] == 15) /* if voxel is water source, add node */
+                /* if voxel is water and at least one neighbouring voxel is air */
+                else if ((this->texture[i             ] == 15) && (
+                          this->texture[i+1           ] == 0 ||
+                          this->texture[i-1           ] == 0 ||
+                          this->texture[i+paddedSize.x] == 0 ||
+                          this->texture[i-paddedSize.x] == 0 ||
+                          this->texture[i-this->y_step] == 0 ))
                     waterNodes.push(i);
             }
     this->waterOnBorders = 0;
@@ -377,78 +383,53 @@ void    Chunk::render( Shader shader, Camera& camera, GLuint textureAtlas, uint 
         glBindTexture(GL_TEXTURE_2D, textureAtlas);
 
         /* render opaque */
-        if (this->voxelsOpaque.size() > 0) {
-            glBindVertexArray(this->vaoOpaqueMesh);
-            glDrawArrays(GL_POINTS, 0, this->voxelsOpaque.size());
+        if (this->mesh_opaque.voxels.size() > 0) {
+            glBindVertexArray(this->mesh_opaque.vao);
+            glDrawArrays(GL_POINTS, 0, this->mesh_opaque.voxels.size());
             glBindVertexArray(0);
         }
         /* render transparent */
-        if (this->voxelsTransparent.size() > 0) {
+        if (this->mesh_transparent.voxels.size() > 0) {
             /* perform small offset of mesh to have waterline a bit lower */
             glm::mat4 newTransform = this->transform;
             // newTransform = glm::translate(newTransform, glm::vec3(0, -0.25, 0)); /* ISSUE: with face culling if we offset down or up */
             shader.setMat4UniformValue("_mvp", camera.getViewProjectionMatrix() * newTransform);
             shader.setMat4UniformValue("_model", newTransform);
 
-            glBindVertexArray(this->vaoTransparentMesh);
-            glDrawArrays(GL_POINTS, 0, this->voxelsTransparent.size());
+            glBindVertexArray(this->mesh_transparent.vao);
+            glDrawArrays(GL_POINTS, 0, this->mesh_transparent.voxels.size());
             glBindVertexArray(0);
         }
     }
 }
 
-void    Chunk::setupMeshOpaque( int mode ) {
-	glGenVertexArrays(1, &this->vaoOpaqueMesh);
-    glGenBuffers(1, &this->vboOpaqueMesh);
-	glBindVertexArray(this->vaoOpaqueMesh);
-	glBindBuffer(GL_ARRAY_BUFFER, this->vboOpaqueMesh);
-	glBufferData(GL_ARRAY_BUFFER, this->voxelsOpaque.size() * sizeof(tPoint), this->voxelsOpaque.data(), mode);
-    /* position attribute */
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(tPoint), static_cast<GLvoid*>(0));
-    /* ao attribute */
-    glEnableVertexAttribArray(1);
-	glVertexAttribIPointer(1, 2, GL_INT, sizeof(tPoint), reinterpret_cast<GLvoid*>(offsetof(tPoint, ao)));
-    /* id attribute */
-    glEnableVertexAttribArray(2);
-	glVertexAttribIPointer(2, 1, GL_UNSIGNED_BYTE, sizeof(tPoint), reinterpret_cast<GLvoid*>(offsetof(tPoint, id)));
-    /* occluded faces attribute */
-    glEnableVertexAttribArray(3);
-	glVertexAttribIPointer(3, 1, GL_UNSIGNED_BYTE, sizeof(tPoint), reinterpret_cast<GLvoid*>(offsetof(tPoint, visibleFaces)));
-    /* light attribute */
-    glEnableVertexAttribArray(4);
-	glVertexAttribIPointer(4, 1, GL_INT, sizeof(tPoint), reinterpret_cast<GLvoid*>(offsetof(tPoint, light)));
-
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
-}
-
-void    Chunk::setupMeshTransparent( int mode ) {
+void    Chunk::setupMesh( mesh_t* mesh, int mode ) {
     /* new for transparent */
-    glGenVertexArrays(1, &this->vaoTransparentMesh);
-    glGenBuffers(1, &this->vboTransparentMesh);
-	glBindVertexArray(this->vaoTransparentMesh);
-	glBindBuffer(GL_ARRAY_BUFFER, this->vboTransparentMesh);
-	glBufferData(GL_ARRAY_BUFFER, this->voxelsTransparent.size() * sizeof(tPoint), this->voxelsTransparent.data(), mode);
+    glGenVertexArrays(1, &mesh->vao);
+    glGenBuffers(1, &mesh->vbo);
+	glBindVertexArray(mesh->vao);
+	glBindBuffer(GL_ARRAY_BUFFER, mesh->vbo);
+	glBufferData(GL_ARRAY_BUFFER, mesh->voxels.size() * sizeof(point_t), mesh->voxels.data(), mode);
     /* position attribute */
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(tPoint), static_cast<GLvoid*>(0));
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(point_t), static_cast<GLvoid*>(0));
     /* ao attribute */
     glEnableVertexAttribArray(1);
-	glVertexAttribIPointer(1, 2, GL_INT, sizeof(tPoint), reinterpret_cast<GLvoid*>(offsetof(tPoint, ao)));
+	glVertexAttribIPointer(1, 2, GL_INT, sizeof(point_t), reinterpret_cast<GLvoid*>(offsetof(point_t, ao)));
     /* id attribute */
     glEnableVertexAttribArray(2);
-	glVertexAttribIPointer(2, 1, GL_UNSIGNED_BYTE, sizeof(tPoint), reinterpret_cast<GLvoid*>(offsetof(tPoint, id)));
+	glVertexAttribIPointer(2, 1, GL_UNSIGNED_BYTE, sizeof(point_t), reinterpret_cast<GLvoid*>(offsetof(point_t, id)));
     /* occluded faces attribute */
     glEnableVertexAttribArray(3);
-	glVertexAttribIPointer(3, 1, GL_UNSIGNED_BYTE, sizeof(tPoint), reinterpret_cast<GLvoid*>(offsetof(tPoint, visibleFaces)));
+	glVertexAttribIPointer(3, 1, GL_UNSIGNED_BYTE, sizeof(point_t), reinterpret_cast<GLvoid*>(offsetof(point_t, visibleFaces)));
     /* light attribute */
     glEnableVertexAttribArray(4);
-	glVertexAttribIPointer(4, 1, GL_INT, sizeof(tPoint), reinterpret_cast<GLvoid*>(offsetof(tPoint, light)));
+	glVertexAttribIPointer(4, 1, GL_INT, sizeof(point_t), reinterpret_cast<GLvoid*>(offsetof(point_t, light)));
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 }
+
 
 void    Chunk::createModelTransform( const glm::vec3& position ) {
     this->transform = glm::mat4();
