@@ -6,6 +6,8 @@ Chunk::Chunk( const glm::vec3& position, const glm::ivec3& chunkSize, const uint
     this->paddedSize = chunkSize + static_cast<int>(margin);
     this->y_step = paddedSize.x * paddedSize.z;
     this->lightPasses = 0;
+    this->waterOnBorders = 0;
+    this->lightOnBorders = 0;
     this->lightComplete = false;
 
     this->texture = static_cast<uint8_t*>(malloc(sizeof(uint8_t) * paddedSize.x * paddedSize.y * paddedSize.z));
@@ -162,12 +164,14 @@ glm::ivec2  Chunk::getVerticesAoValue( int i, uint8_t visibleFaces ) const {
 }
 
 void    Chunk::rebuildMesh( void ) {
-    this->voxelsOpaque.clear();
-    this->voxelsTransparent.clear();
-    glDeleteBuffers(1, &this->vaoOpaqueMesh);
-    glDeleteBuffers(1, &this->vboOpaqueMesh);
-    glDeleteBuffers(1, &this->vaoTransparentMesh);
-    glDeleteBuffers(1, &this->vboTransparentMesh);
+    if (this->meshed == true) {
+        this->voxelsOpaque.clear();
+        this->voxelsTransparent.clear();
+        glDeleteBuffers(1, &this->vaoOpaqueMesh);
+        glDeleteBuffers(1, &this->vboOpaqueMesh);
+        glDeleteBuffers(1, &this->vaoTransparentMesh);
+        glDeleteBuffers(1, &this->vboTransparentMesh);
+    }
     this->buildMesh();
 }
 
@@ -193,8 +197,8 @@ void    Chunk::buildMesh( void ) {
                                 ((int)lightMap[i + this->y_step] <<  4) | ((int)lightMap[i - this->y_step]);
                     this->voxelsOpaque.push_back( (tPoint){ glm::vec3(x, y, z), ao, b, visibleFaces, light } );
                 }
-                else if (this->texture[i] == 15 && !isVoxelCulledTransparent(i)) { /* if voxel is water */
-                    uint8_t visibleFaces = 0x03;
+                else if (this->texture[i] == 15){// && !isVoxelCulledTransparent(i)) { /* if voxel is water */
+                    uint8_t visibleFaces = 255;//0x03;
                     uint8_t b = static_cast<uint8_t>(this->texture[i] - 1);
                     glm::ivec2 ao = getVerticesAoValue(i, visibleFaces);
                     int light = ((int)lightMap[i + 1           ] << 20) | ((int)lightMap[i - 1           ] << 16) |
@@ -288,6 +292,7 @@ void    Chunk::computeLight( std::array<Chunk*, 6> neighbouringChunks, const uin
                     }
                 }
             }
+    this->lightOnBorders = 0;
     /* propagation pass */
     while (lightNodes.empty() == false) {
         int index = lightNodes.front();
@@ -298,12 +303,12 @@ void    Chunk::computeLight( std::array<Chunk*, 6> neighbouringChunks, const uin
             if (isVoxelTransparent(index + offset[side]) && this->lightMap[index + offset[side]] + 2 <= currentLight) {
                 this->lightMap[index + offset[side]] = currentLight - 1;
                 lightNodes.push(index + offset[side]);
+
+                if (isBorder(index + offset[side]))
+                    this->lightOnBorders |= (0x1 << side);
             }
         }
     }
-    // if (this->lightPasses == 1 && neighbouringChunks[0] != nullptr && neighbouringChunks[1] != nullptr &&
-    //     neighbouringChunks[2] != nullptr && neighbouringChunks[4] != nullptr && neighbouringChunks[5] != nullptr)
-    //     this->lightComplete = true;
     this->lighted = true;
     this->lightPasses++;
 }
@@ -337,6 +342,7 @@ void    Chunk::computeWater( std::array<Chunk*, 6> neighbouringChunks ) {
                 else if (this->texture[i] == 15) /* if voxel is water source, add node */
                     waterNodes.push(i);
             }
+    this->waterOnBorders = 0;
     /* propagation pass */
     while (waterNodes.empty() == false) {
         int index = waterNodes.front();
@@ -345,6 +351,9 @@ void    Chunk::computeWater( std::array<Chunk*, 6> neighbouringChunks ) {
             if (side != 2 && this->texture[index + offset[side]] == 0) { /* propagate water on air blocks */
                 this->texture[index + offset[side]] = 15;
                 waterNodes.push(index + offset[side]);
+                /* set sides that were updated (to propagate to neighbours) */
+                if (isBorder(index + offset[side]))
+                    this->waterOnBorders |= (0x1 << side);
             }
         }
     }

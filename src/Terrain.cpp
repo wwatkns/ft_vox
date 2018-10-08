@@ -35,6 +35,15 @@ Terrain::~Terrain( void ) {
     this->dataBuffer = NULL;
 }
 
+const std::array<glm::vec3, 6> neighboursOffsets = {
+    glm::vec3( 1, 0, 0),
+    glm::vec3(-1, 0, 0),
+    glm::vec3( 0, 1, 0),
+    glm::vec3( 0,-1, 0),
+    glm::vec3( 0, 0, 1),
+    glm::vec3( 0, 0,-1)
+};
+
 /* return the chunk position (in chunk space, left chunk is {-1, 0, 0} ) */
 glm::vec3   Terrain::getChunkPosition( const glm::vec3& position ) {
     glm::vec3 chunkPosition;
@@ -90,7 +99,6 @@ void    Terrain::addChunksToGenerationList( const glm::vec3& cameraPosition ) {
     glm::ivec3 dist = glm::ivec3(this->renderDistance) / this->chunkSize + 3;
     const float e = 0.01;
 
-    /* first pass */
     for (int y = height-1; y >= 0; y--) {
         for (int d = 0; d <= dist.x; d++) {
             float d2 = 2.*d; float d4 = 4.*d;
@@ -101,33 +109,13 @@ void    Terrain::addChunksToGenerationList( const glm::vec3& cameraPosition ) {
                 glm::vec3 p = glm::vec3(std::abs(std::round(x_triangleWave))-d, y, std::abs(std::round(z_triangleWave))-d);
 
                 Key key = { this->getChunkPosition(cameraPosition) * glm::vec3(1, 0, 1) + p };
-                Key2 key2 = { glm::vec4(key.p, 1) };
-                if (this->chunks.find(key) == this->chunks.end() && this->chunksToLoadSet.find(key2) == this->chunksToLoadSet.end()) { /* if chunk was never generated */
-                    this->chunksToLoadQueue.push(key2);
-                    this->chunksToLoadSet.insert(key2);
+                if (this->chunks.find(key) == this->chunks.end() && this->chunksToLoadSet.find(key) == this->chunksToLoadSet.end()) { /* if chunk was never generated */
+                    this->chunksToLoadQueue.push(key);
+                    this->chunksToLoadSet.insert(key);
                 }
             }
         }
     }
-    /* second pass */
-    // for (int y = 0; y < height; y++) { /* invert y ? */
-    //     for (int d = dist.x; d >= 0; d--) {
-    //         float d2 = 2.*d; float d4 = 4.*d;
-    //         if (d == 0) d4 = d2 = 0.5;
-    //         for (int xz = 0; xz < d4; xz++) {
-    //             float x_triangleWave = 2.*std::abs( std::round(0.5*( ((xz+e)/d2) - (1./d4)      )) - 0.5*( ((xz+e)/d2) - (1./d4)      ) ) * d2;
-    //             float z_triangleWave = 2.*std::abs( std::round(0.5*( ((xz+e)/d2) - (1./d4) + 0.5)) - 0.5*( ((xz+e)/d2) - (1./d4) + 0.5) ) * d2;
-    //             glm::vec3 p = glm::vec3(std::abs(std::round(x_triangleWave))-d, y, std::abs(std::round(z_triangleWave))-d);
-    //             // std::cout << "(" << x << ", " << y << ", " << z << ")\n";
-    //             Key key = { this->getChunkPosition(cameraPosition) * glm::vec3(1, 0, 1) + p };
-    //             Key2 key2 = { glm::vec4(key.p, 2) };
-    //             if (this->chunks.find(key) == this->chunks.end() && this->chunksToLoadSet.find(key2) == this->chunksToLoadSet.end()) {
-    //                 this->chunksToLoadQueue.push(key2);
-    //                 this->chunksToLoadSet.insert(key2);
-    //             }
-    //         }
-    //     }
-    // }
 }
 
 // void    Terrain::generateChunkMeshes( void ) {
@@ -170,83 +158,56 @@ void    Terrain::updateChunks( const glm::vec3& cameraPosition ) {
     tTimePoint lastTime = std::chrono::high_resolution_clock::now();
     this->addChunksToGenerationList(cameraPosition);
 
+    /* delay by one frame, so that generation is not on same frame as updates */
+    /* update neighbours */
+    while (chunksToUpdateQueue.empty() == false) {
+        update_t elem = this->chunksToUpdateQueue.front();
+        this->chunksToUpdateQueue.pop();
+        std::array<Chunk*, 6> neighbours = this->getNeighbouringChunks(elem.chunk);
+        Key key = { elem.chunk };
+        if (elem.action == updateType::water)
+            this->chunks[key]->computeWater(neighbours);
+        if (elem.action == updateType::light)
+            this->chunks[key]->computeLight(neighbours, (neighbours[2] != nullptr ? neighbours[2]->getLightMask() : nullptr) );
+        this->chunks[key]->rebuildMesh();
+
+        for (int i = 0; i < 6; i++) {
+            if (neighbours[i] != nullptr && elem.chunk + neighboursOffsets[i] != elem.from) {
+                if ((this->chunks[key]->waterOnBorders & (0x1 << i)) != 0)
+                    this->chunksToUpdateQueue.push({ elem.chunk + neighboursOffsets[i], elem.chunk, updateType::water });
+                if ((this->chunks[key]->lightOnBorders & (0x1 << i)) != 0)
+                    this->chunksToUpdateQueue.push({ elem.chunk + neighboursOffsets[i], elem.chunk, updateType::light });
+            }
+        }
+        double delta = (static_cast<tMilliseconds>(std::chrono::high_resolution_clock::now() - lastTime)).count();
+        if (delta > 10.0)//this->maxAllocatedTimePerFrame)
+            break;
+    }
+
+    /* generate chunks */
     while (chunksToLoadQueue.empty() == false) {
-        Key2 key2 = this->chunksToLoadQueue.front();
-        Key key = { glm::vec3(key2.p) };
+        Key key = this->chunksToLoadQueue.front();
         /* delete element in load queue & set */
         this->chunksToLoadQueue.pop();
-        this->chunksToLoadSet.erase(key2);
+        this->chunksToLoadSet.erase(key);
         /* check if element to load is still in range */
         float distHorizontal = glm::distance(key.p * glm::vec3(1,0,1),  this->getChunkPosition(cameraPosition) * glm::vec3(1,0,1));
-        if (distHorizontal > (renderDistance / chunkSize.x) && key2.p.w != 2)
+        if (distHorizontal > (renderDistance / chunkSize.x))
             continue;
-        if (distHorizontal > (renderDistance / chunkSize.x) && key2.p.w == 2 && this->chunks.find(key) != this->chunks.end()) {
-            this->chunks.erase(key);
-            continue;
-        }
+        /* generate terrain and create chunk */
+        glm::vec3 position = key.p * (glm::vec3)this->chunkSize;
+        this->renderChunkGeneration(position, this->dataBuffer);
+        this->chunks.insert( { key, new Chunk(position, this->chunkSize, this->dataBuffer, this->dataMargin) } );
+        /* issue update to light and water */
+        this->chunksToUpdateQueue.push({ key.p, key.p, updateType::water });
+        this->chunksToUpdateQueue.push({ key.p, key.p, updateType::light });
 
-        /* first pass elements */
-        if (key2.p.w == 1) {
-            /* generate terrain and create chunk */
-            glm::vec3 position = key.p * (glm::vec3)this->chunkSize;
-            this->renderChunkGeneration(position, this->dataBuffer);
-            this->chunks.insert( { key, new Chunk(position, this->chunkSize, this->dataBuffer, this->dataMargin) } );
-            /* compute chunk light (first pass) */
-            const uint8_t* aboveLightMask = (chunks.find({key.p+glm::vec3(0,1,0)}) != chunks.end() ? chunks[{key.p+glm::vec3(0,1,0)}]->getLightMask() : nullptr);
-            std::array<Chunk*, 6> neighbouringChunks = this->getNeighbouringChunks(key.p);
-            tTimePoint lastTime = std::chrono::high_resolution_clock::now();
-            this->chunks[key]->computeWater(neighbouringChunks);
-            std::cout << (static_cast<tMilliseconds>(std::chrono::high_resolution_clock::now() - lastTime)).count() << std::endl;
-            this->chunks[key]->computeLight(neighbouringChunks, aboveLightMask);
-            this->chunks[key]->buildMesh();
-
-            /* re-issue a first lighting pass (that's a working hack, but slow as fuck) */
-            // if (aboveLightMask == nullptr && key.p.y != 7) {
-            //     this->chunksToLoadQueue.push(key2);
-            //     this->chunksToLoadSet.insert(key2);
-            // }
-            // else {
-            //     glm::vec3 position = key.p * (glm::vec3)this->chunkSize;
-            //     this->renderChunkGeneration(position, this->dataBuffer);
-            //     this->chunks.insert( { key, new Chunk(position, this->chunkSize, this->dataBuffer, this->dataMargin) } );
-            //     std::array<Chunk*, 6> neighbouringChunks = this->getNeighbouringChunks(key.p);
-            //     this->chunks[key]->computeLight(neighbouringChunks, aboveLightMask);
-            //     this->chunks[key]->buildMesh();
-            // }
-        }
-        // else { /* second pass elements */
-        //     if (this->chunks.find(key) != this->chunks.end()) {
-        //         /* compute chunk light (second pass) */
-        //         std::array<Chunk*, 6> neighbouringChunks = this->getNeighbouringChunks(key.p);
-        //         const uint8_t* aboveLightMask = (chunks.find({key.p+glm::vec3(0,1,0)}) != chunks.end() ? chunks[{key.p+glm::vec3(0,1,0)}]->getLightMask() : nullptr);
-        //         this->chunks[key]->computeLight(neighbouringChunks, aboveLightMask);
-        //         this->chunks[key]->computeWater(neighbouringChunks);
-        //         /* mesh chunk */
-        //         this->chunks[key]->buildMesh();
-        //     }
-        // }
-        // double delta = (static_cast<tMilliseconds>(std::chrono::high_resolution_clock::now() - lastTime)).count();
-        // if (delta > 20)//this->maxAllocatedTimePerFrame)
-        //     break;
+        double delta = (static_cast<tMilliseconds>(std::chrono::high_resolution_clock::now() - lastTime)).count();
+        if (delta > this->maxAllocatedTimePerFrame)
+            break;
     }
-    // std::cout << (static_cast<tMilliseconds>(std::chrono::high_resolution_clock::now() - lastTime)).count() << std::endl;
+    std::cout << (static_cast<tMilliseconds>(std::chrono::high_resolution_clock::now() - lastTime)).count() << std::endl;
 
-    /* check chunks that need rebuilding once they're information complete */
-    /* ISSUE:
-        in the case where first lighting pass was performed with aboveLightMask as nullptr (chunk above was missing),
-        the chunk is fully lit, even in a cave... (this happens sometimes)
-    */
-    for (std::pair<Key, Chunk*> chunk : this->chunks) {
-        std::array<Chunk*, 6> neighbouringChunks = this->getNeighbouringChunks(chunk.first.p);
-        /* update chunks that are not light complete when all their neighbours are present */
-        if (chunk.second->isMeshed() && chunk.second->lightComplete == false && neighbouringChunks[0] != nullptr && neighbouringChunks[1] != nullptr &&
-            neighbouringChunks[2] != nullptr && neighbouringChunks[4] != nullptr && neighbouringChunks[5] != nullptr) {
-            chunk.second->computeWater(neighbouringChunks);
-            chunk.second->computeLight(neighbouringChunks, nullptr);
-            chunk.second->rebuildMesh();
-            chunk.second->lightComplete = true;
-        }
-    }
     this->deleteOutOfRangeChunks();
 }
 

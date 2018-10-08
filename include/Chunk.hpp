@@ -53,8 +53,10 @@ public:
     const bool          isBorder( int i );
     const bool          isMaskZero( const uint8_t* mask );
 
-    int                 lightPasses; // NEW TMP
+    int                 lightPasses; // TMP
     bool                lightComplete;
+    int                 waterOnBorders; // TMP
+    int                 lightOnBorders; // TMP
 
 private:
     GLuint              vaoOpaqueMesh;        // Vertex Array Object

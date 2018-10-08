@@ -77,29 +77,22 @@ struct KeyHash {
     }
 };
 
-struct  Key2 {
-    glm::vec4   p;
-    bool operator==(const Key2 &other) const {
-        return (p.x == other.p.x && p.y == other.p.y && p.z == other.p.z && p.w == other.p.w);
-    }
-};
-struct KeyHash2 {
-    /* /!\ positions are stored as 16 bits integers, so world position should not go further than 2^15 = 32768 chunks in any direction, or 1,048,576 blocks */
-    uint64_t operator()(const Key2 &k) const {
-        uint64_t    hash = 0;
-        hash |= static_cast<uint64_t>(static_cast<int>(k.p.x) + 0x7FFF);
-        hash |= static_cast<uint64_t>(static_cast<int>(k.p.y) + 0x7FFF) << 16;
-        hash |= static_cast<uint64_t>(static_cast<int>(k.p.z) + 0x7FFF) << 32;
-        return (hash);
-    }
-};
-
 struct  setChunkRenderCompare {
     bool operator()(const glm::vec4& a, const glm::vec4& b) const {
         return (a.w < b.w);
     }
 };
 
+enum class updateType {
+    water,
+    light
+};
+
+typedef struct  update_s {
+    glm::vec3   chunk;
+    glm::vec3   from;
+    updateType  action;
+}               update_t;
 
 class Terrain {
 
@@ -120,8 +113,9 @@ public:
 
 private:
     std::unordered_map<Key, Chunk*, KeyHash>    chunks;
-    std::unordered_set<Key2, KeyHash2>          chunksToLoadSet; // need to to easy check if chunk is present in queue
-    std::queue<Key2>                            chunksToLoadQueue; // queue to have ordered chunk lookup
+    std::unordered_set<Key, KeyHash>            chunksToLoadSet; // need to to easy check if chunk is present in queue
+    std::queue<Key>                             chunksToLoadQueue; // queue to have ordered chunk lookup
+    std::queue<update_t>                        chunksToUpdateQueue; // TMP
 
     float                                       maxAllocatedTimePerFrame;
     glm::ivec3                  chunkSize;
