@@ -30,6 +30,7 @@ in vec2 TexCoords;
 flat in int Id;
 in float Ao;
 in float Light;
+flat in int Underwater; // TMP
 
 /* uniforms */
 uniform sampler2D atlas;
@@ -90,12 +91,18 @@ void main() {
         // FragColor = vec4((getBlocTexture().xyz + 0.2) * Ao * (Light*0.9+0.1), (Id == 14 ? 0.65 : 1.0) ); return;	
     // }
     // FragColor = vec4(getBlocTexture().xyz * Ao * (pow(Light, 1.5)*0.95+0.05), (Id == 14 ? 0.65 : 1.0) );
-    FragColor = vec4(getBlocTexture().xyz * Ao * (pow(Light, 1.5)*0.95+0.05), (Id == 14 ? 0.65 : 1.0) );
+    FragColor = vec4(getBlocTexture().xyz * Ao * (pow(Light, 1.5)*0.95+0.05), (Id == 14 ? (underwater==1?0.85:0.43) : 1.0) );
     // FragColor = vec4(getBlocTexture().xyz * Ao * (pow(Light, 1.5)*0.5+0.5), (Id == 14 ? 0.65 : 1.0) );
     // FragColor = vec4(getBlocTexture().xyz * Ao * (Light*0.8+0.2), (Id == 14 ? 0.65 : 1.0) );
 
-    if (underwater == 1)
-        FragColor = FragColor * vec4(0.75, 0.75, 2., 1) * vec4(vec3(5. / distance(cameraPos, FragPos)), 1);
+    /* if voxel face is underwater, tint */
+    if (Underwater == 1)
+        FragColor = FragColor * vec4(0.5, 0.53, 1., 1);
+    /* if we're underwater, add blue effect */
+    if (underwater == 1) {
+        float d = max(1-min(8./distance(cameraPos, FragPos), 1), 0.15);
+        FragColor += vec4(-d*0.03, d*0.01, d*0.1, 0);
+    }
 }
 
 vec3 computeDirectionalLight( sDirectionalLight light, vec3 normal, vec3 viewDir, vec4 fragPosLightSpace ) {

@@ -36,12 +36,7 @@ Terrain::~Terrain( void ) {
 }
 
 const std::array<glm::vec3, 6> neighboursOffsets = {
-    glm::vec3( 1, 0, 0),
-    glm::vec3(-1, 0, 0),
-    glm::vec3( 0, 1, 0),
-    glm::vec3( 0,-1, 0),
-    glm::vec3( 0, 0, 1),
-    glm::vec3( 0, 0,-1)
+    glm::vec3( 1, 0, 0), glm::vec3(-1, 0, 0), glm::vec3( 0, 1, 0), glm::vec3( 0,-1, 0), glm::vec3( 0, 0, 1), glm::vec3( 0, 0,-1)
 };
 
 /* return the chunk position (in chunk space, left chunk is {-1, 0, 0} ) */
@@ -176,6 +171,27 @@ void    Terrain::deleteOutOfRangeChunks( void ) {
     toDelete.clear();
 }
 
+void    Terrain::renderChunks( Shader shader, Camera& camera ) {
+    /* copy values to array and sort them from far to front */
+    chunkSort_t* sortedChunks = (chunkSort_t*)malloc(sizeof(chunkSort_t) * this->chunks.size());
+    int i = 0;
+    for (std::pair<ckey_t, Chunk*> chunk : this->chunks)
+        sortedChunks[(i++)] = { chunk.second, glm::distance(chunk.first.p, getChunkPosition(camera.getPosition())) };
+    std::sort(sortedChunks, sortedChunks+this->chunks.size(), chunkRenderingCompareSort); /* O(n*log(n)) */
+    /* test, detect if we're underwater */
+    glm::vec3 chunkPosition = getChunkPosition(camera.getPosition());
+    glm::ivec3 positionInChunk = glm::ivec3(camera.getPosition() + glm::vec3(0,.5,0) - (chunkPosition * glm::vec3(32)) );
+    int underwater = 0;
+    int index = ((int)positionInChunk.x+2) + ((int)positionInChunk.z+2) * 36 + ((int)positionInChunk.y+2) * 1296;
+    if (this->chunks.find({chunkPosition}) != this->chunks.end() && this->chunks[{chunkPosition}]->getTexture()[index] == 15)
+        underwater = 1;
+    /* render chunks in order */
+    for (int i = 0; i < this->chunks.size(); ++i)
+        sortedChunks[i].chunk->render(shader, camera, this->textureAtlas, renderDistance, underwater);
+    free(sortedChunks);
+    sortedChunks = nullptr;
+}
+
 void    Terrain::renderChunkGeneration( const glm::vec3& position ) {
     GLint m_viewport[4];
     glGetIntegerv(GL_VIEWPORT, m_viewport);
@@ -213,27 +229,6 @@ void    Terrain::renderChunkGeneration( const glm::vec3& position ) {
     glEnable(GL_DEPTH_TEST);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(m_viewport[0], m_viewport[1], m_viewport[2], m_viewport[3]);
-}
-
-void    Terrain::renderChunks( Shader shader, Camera& camera ) {
-    /* copy values to array and sort them from far to front */
-    chunkSort_t* sortedChunks = (chunkSort_t*)malloc(sizeof(chunkSort_t) * this->chunks.size());
-    int i = 0;
-    for (std::pair<ckey_t, Chunk*> chunk : this->chunks)
-        sortedChunks[(i++)] = { chunk.second, glm::distance(chunk.first.p, getChunkPosition(camera.getPosition())) };
-    std::sort(sortedChunks, sortedChunks+this->chunks.size(), chunkRenderingCompareSort); /* O(n*log(n)) */
-    /* test, detect if we're underwater */
-    glm::vec3 chunkPosition = getChunkPosition(camera.getPosition());
-    glm::ivec3 positionInChunk = glm::ivec3(camera.getPosition() + glm::vec3(0,0.65,0) - (chunkPosition * glm::vec3(32)) );
-    int underwater = 0;
-    int index = ((int)positionInChunk.x+2) + ((int)positionInChunk.z+2) * 36 + ((int)positionInChunk.y+2) * 1296;
-    if (this->chunks.find({chunkPosition}) != this->chunks.end() && this->chunks[{chunkPosition}]->getTexture()[index] == 15)
-        underwater = 1;
-    /* render chunks in order */
-    for (int i = 0; i < this->chunks.size(); ++i)
-        sortedChunks[i].chunk->render(shader, camera, this->textureAtlas, renderDistance, underwater);
-    free(sortedChunks);
-    sortedChunks = nullptr;
 }
 
 void    Terrain::setupChunkGenerationRenderingQuad( void ) {

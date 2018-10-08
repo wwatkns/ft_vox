@@ -14,6 +14,7 @@ out vec3 Normal;
 out vec2 TexCoords;
 out float Ao;
 out float Light;
+flat out int Underwater; // TMP
 flat out int Id;
 
 uniform vec3 viewPos;
@@ -103,6 +104,7 @@ void    main() {
     if (dot(Normal, (FragPos + dx.xyz) - viewPos) < 0) {
         if ( (gVisibleFaces[0] & 0x20) != 0) { /* right */
             Light = (float((gLight[0] & 0xF00000) >> 20)/15);
+            Underwater = int((gLight[0]&(0x1<<29)) != 0);
             int ao = (gAo[0][0] & 0xFF000000) >> 24;
             if ( (flippedQuads & 0x20) != 0 )
                 AddQuadFlipped(center + dx, dy, dz, ao, false);
@@ -114,6 +116,7 @@ void    main() {
         Normal = vec3(-1.0, 0.0, 0.0);
         if ( (gVisibleFaces[0] & 0x10) != 0) { /* left */
             Light = (float((gLight[0] & 0x0F0000) >> 16)/15);
+            Underwater = int((gLight[0]&(0x1<<28)) != 0);
             int ao = (gAo[0][0] & 0x00FF0000) >> 16;
             if ( (flippedQuads & 0x10) != 0 )
                 AddQuadFlipped(center - dx, dz, dy, ao, true);
@@ -125,6 +128,7 @@ void    main() {
     if (dot(Normal, (FragPos + dy.xyz) - viewPos) < 0) {
         if ( (gVisibleFaces[0] & 0x02) != 0) { /* top */
             Light = (float((gLight[0] & 0x0000F0) >> 4)/15);
+            Underwater = int((gLight[0]&(0x1<<25)) != 0);
             int ao = (gAo[0][1] & 0x0000FF00) >> 8;
             if ( (flippedQuads & 0x02) != 0 )
                 AddQuadFlipped(center + dy, dz, dx, ao, false);
@@ -136,6 +140,7 @@ void    main() {
         Normal = vec3( 0.0,-1.0, 0.0);
         if ( (gVisibleFaces[0] & 0x01) != 0) { /* bottom */
             Light = (float(gLight[0] & 0x00000F)/15);
+            Underwater = int((gLight[0]&(0x1<<24)) != 0);
             int ao = (gAo[0][1] & 0x000000FF);
             if ( (flippedQuads & 0x01) != 0 )
                 AddQuadFlipped(center - dy, dx, dz, ao, false);
@@ -147,6 +152,7 @@ void    main() {
     if (dot(Normal, (FragPos + dz.xyz) - viewPos) < 0) {
         if ( (gVisibleFaces[0] & 0x08) != 0) { /* front */
             Light = (float((gLight[0] & 0x00F000) >> 12)/15);
+            Underwater = int((gLight[0]&(0x1<<27)) != 0);
             int ao = (gAo[0][0] & 0x0000FF00) >> 8;
             if ( (flippedQuads & 0x08) != 0 )
                 AddQuadFlipped(center + dz, dx, dy, ao, true);
@@ -158,6 +164,7 @@ void    main() {
         Normal = vec3( 0.0, 0.0,-1.0);
         if ( (gVisibleFaces[0] & 0x04) != 0) { /* back */
             Light = (float((gLight[0] & 0x000F00) >> 8)/15);
+            Underwater = int((gLight[0]&(0x1<<26)) != 0);
             int ao = (gAo[0][0] & 0x000000FF);
             if ( (flippedQuads & 0x04) != 0 )
                 AddQuadFlipped(center - dz, dy, dx, ao, false);

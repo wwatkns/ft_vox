@@ -42,8 +42,8 @@ public:
     void                buildMesh( void );
     void                rebuildMesh( void );
 
-    void                computeWater( std::array<Chunk*, 6> neighbouringChunks );
-    void                computeLight( std::array<Chunk*, 6> neighbouringChunks, const uint8_t* aboveLightMask );
+    void                computeWater( const std::array<Chunk*, 6>& neighbouringChunks );
+    void                computeLight( const std::array<Chunk*, 6>& neighbouringChunks, const uint8_t* aboveLightMask );
     void                render( Shader shader, Camera& camera, GLuint textureAtlas, uint renderDistance, int underwater );
     /* getters */
     const glm::vec3&    getPosition( void ) const { return position; };

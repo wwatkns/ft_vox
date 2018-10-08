@@ -193,11 +193,18 @@ void    Chunk::buildMesh( void ) {
                     int light = ((int)lightMap[i + 1           ] << 20) | ((int)lightMap[i - 1           ] << 16) |
                                 ((int)lightMap[i + paddedSize.x] << 12) | ((int)lightMap[i - paddedSize.x] <<  8) |
                                 ((int)lightMap[i + this->y_step] <<  4) | ((int)lightMap[i - this->y_step]);
+                    // extra bit debug (faces underwater, 6bits)
+                    if (texture[i - this->y_step] == 15) light |= (0x1 << 24); // bottom
+                    if (texture[i + this->y_step] == 15) light |= (0x1 << 25); // top
+                    if (texture[i - paddedSize.x] == 15) light |= (0x1 << 26); // back
+                    if (texture[i + paddedSize.x] == 15) light |= (0x1 << 27); // front
+                    if (texture[i - 1           ] == 15) light |= (0x1 << 28); // left
+                    if (texture[i + 1           ] == 15) light |= (0x1 << 29); // right
                     this->mesh_opaque.voxels.push_back( (point_t){ glm::vec3(x, y, z), ao, b, visibleFaces, light } );
                     // add voxel bit mod, for modifiers like underwater (to paint voxel in blue)
                 }
-                else if (this->texture[i] == 15) {// && !isVoxelCulledTransparent(i)) { /* if voxel is water */
-                    uint8_t visibleFaces = 255;//0x03;
+                else if (this->texture[i] == 15 && !isVoxelCulledTransparent(i)) { /* if voxel is water */
+                    uint8_t visibleFaces = 0x03; // we won't see the surface from under
                     uint8_t b = static_cast<uint8_t>(this->texture[i] - 1);
                     glm::ivec2 ao = getVerticesAoValue(i, visibleFaces);
                     int light = ((int)lightMap[i + 1           ] << 20) | ((int)lightMap[i - 1           ] << 16) |
@@ -232,7 +239,7 @@ const bool  Chunk::isMaskZero( const uint8_t* mask ) {
     return !b;
 }
 
-void    Chunk::computeLight( std::array<Chunk*, 6> neighbouringChunks, const uint8_t* aboveLightMask ) {
+void    Chunk::computeLight( const std::array<Chunk*, 6>& neighbouringChunks, const uint8_t* aboveLightMask ) {
     const int m = this->margin / 2;
     std::queue<int>   lightNodes;
 
@@ -253,17 +260,21 @@ void    Chunk::computeLight( std::array<Chunk*, 6> neighbouringChunks, const uin
                     int j = (x+m) + (z+m) * paddedSize.x;
                     int i = j + (y+m) * this->y_step;
                     /* if voxel is transparent, has full light and has a transparent neighbour with no light */
-                    if (isVoxelTransparent(i) && (this->lightMask[j] == 15) && (
-                       (isVoxelTransparent(i+1           ) && (this->lightMask[j+1           ] == 0)) ||
-                       (isVoxelTransparent(i-1           ) && (this->lightMask[j-1           ] == 0)) ||
-                       (isVoxelTransparent(i+paddedSize.x) && (this->lightMask[j+paddedSize.x] == 0)) ||
-                       (isVoxelTransparent(i-paddedSize.x) && (this->lightMask[j-paddedSize.x] == 0))))
+                    if (texture[i             ] == 0 && (this->lightMask[j] == 15) && (
+                       (texture[i+1           ] == 0 && (this->lightMask[j+1           ] == 0)) ||
+                       (texture[i-1           ] == 0 && (this->lightMask[j-1           ] == 0)) ||
+                       (texture[i+paddedSize.x] == 0 && (this->lightMask[j+paddedSize.x] == 0)) ||
+                       (texture[i-paddedSize.x] == 0 && (this->lightMask[j-paddedSize.x] == 0))))
                     {
                         lightMask[j] = 15;
                         lightNodes.push(i);
                     }
-                    else if (isVoxelTransparent(i) && (this->lightMask[j] == 15))
+                    else if (texture[i] == 0 && (this->lightMask[j] == 15))
                         lightMask[j] = 15;
+                    else if (texture[i] == 15 && (this->lightMask[j] == 15)) { /* create nodes on water surface */
+                        lightMask[j] = lightMask[j]-1;
+                        lightNodes.push(i);
+                    }
                     else /* if voxel is opaque */
                         lightMask[j] = 0;
                     lightMap[i] = lightMask[j];
@@ -298,7 +309,7 @@ void    Chunk::computeLight( std::array<Chunk*, 6> neighbouringChunks, const uin
         lightNodes.pop();
         int currentLight = this->lightMap[index];
         for (int side = 0; side < 6; side++) {
-            /* if block is opaque and light value is at least 2 under current light */
+            /* if block is transparent and light value is at least 2 under current light */
             if (isVoxelTransparent(index + offset[side]) && this->lightMap[index + offset[side]] + 2 <= currentLight) {
                 this->lightMap[index + offset[side]] = currentLight - 1;
                 lightNodes.push(index + offset[side]);
@@ -312,7 +323,7 @@ void    Chunk::computeLight( std::array<Chunk*, 6> neighbouringChunks, const uin
     this->firstLightPass = false;
 }
 
-void    Chunk::computeWater( std::array<Chunk*, 6> neighbouringChunks ) {
+void    Chunk::computeWater( const std::array<Chunk*, 6>& neighbouringChunks ) {
     const int m = this->margin / 2;
     std::queue<int>   waterNodes;
 
@@ -392,6 +403,7 @@ void    Chunk::render( Shader shader, Camera& camera, GLuint textureAtlas, uint 
             /* perform small offset of mesh to have waterline a bit lower */
             glm::mat4 newTransform = this->transform;
             // newTransform = glm::translate(newTransform, glm::vec3(0, -0.25, 0)); /* ISSUE: with face culling if we offset down or up */
+            newTransform = glm::translate(newTransform, glm::vec3(0, underwater, 0)); /* HACK: back faces are off by 1 unit down, so if we're underwater, we raise water voxels by one so that water line is at "correct" height */
             shader.setMat4UniformValue("_mvp", camera.getViewProjectionMatrix() * newTransform);
             shader.setMat4UniformValue("_model", newTransform);
 
