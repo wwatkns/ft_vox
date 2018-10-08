@@ -100,21 +100,22 @@ public:
     void                        generateChunkTextures( void );
     void                        generateChunkMeshes( void );
     void                        computeChunkLight( void );
-    glm::vec3                   getChunkPosition( const glm::vec3& position );
-    std::array<Chunk*, 6>       getNeighbouringChunks( const glm::vec3& position );
+
+    const glm::vec3                   getChunkPosition( const glm::vec3& position ) const;
+    const std::array<Chunk*, 6>       getNeighbouringChunks( const glm::vec3& position ) const;
 
 private:
-    std::unordered_map<ckey_t, Chunk*, KeyHash>    chunks;
-    std::unordered_set<ckey_t, KeyHash>            chunksToLoadSet; // need to to easy check if chunk is present in queue
-    std::queue<ckey_t>                             chunksToLoadQueue; // queue to have ordered chunk lookup
-    std::queue<update_t>                        chunksToUpdateQueue; // TMP
+    std::unordered_map<ckey_t, Chunk*, KeyHash> chunks;
+    std::unordered_set<ckey_t, KeyHash>         chunksToLoadSet; // need to to easy check if chunk is present in queue
+    std::queue<ckey_t>                          chunksToLoadQueue; // queue to have ordered chunk lookup
+    std::queue<update_t>                        chunksToUpdateQueue;
 
     float                       maxAllocatedTimePerFrame;
     glm::ivec3                  chunkSize;
     uint                        renderDistance; /* in blocs */
     uint                        maxHeight;
     Shader*                     chunkGenerationShader;
-    mesh_quad_t                      chunkGenerationRenderingQuad;
+    mesh_quad_t                 chunkGenerationRenderingQuad;
     framebuffer_t               chunkGenerationFbo;
     GLuint                      noiseSampler;
     GLuint                      textureAtlas;
@@ -123,5 +124,5 @@ private:
 
     void                        setupChunkGenerationRenderingQuad( void );
     void                        setupChunkGenerationFbo( void );
-    void                        renderChunkGeneration( const glm::vec3& position, uint8_t* data );
+    void                        renderChunkGeneration( const glm::vec3& position );
 };

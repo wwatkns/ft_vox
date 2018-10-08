@@ -82,8 +82,6 @@ void	Renderer::loop( void ) {
 void    Renderer::renderLights( void ) {
     /* update shader uniforms */
     this->shader["default"]->use();
-    // this->shader["default"]->setIntUniformValue("nPointLights", Light::pointLightCount);
-
     /* render lights for meshes */
     for (auto it = this->env->getLights().begin(); it != this->env->getLights().end(); it++)
         (*it)->render(*this->shader["default"]);

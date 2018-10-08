@@ -32,7 +32,7 @@ Terrain::~Terrain( void ) {
     glDeleteBuffers(1, &this->chunkGenerationRenderingQuad.ebo);
     delete this->chunkGenerationShader;
     free(this->dataBuffer);
-    this->dataBuffer = NULL;
+    this->dataBuffer = nullptr;
 }
 
 const std::array<glm::vec3, 6> neighboursOffsets = {
@@ -45,7 +45,7 @@ const std::array<glm::vec3, 6> neighboursOffsets = {
 };
 
 /* return the chunk position (in chunk space, left chunk is {-1, 0, 0} ) */
-glm::vec3   Terrain::getChunkPosition( const glm::vec3& position ) {
+const glm::vec3   Terrain::getChunkPosition( const glm::vec3& position ) const {
     glm::vec3 chunkPosition;
     // ceil the y position to max height
     chunkPosition.x = std::floor(position.x / (float)this->chunkSize.x);
@@ -55,14 +55,14 @@ glm::vec3   Terrain::getChunkPosition( const glm::vec3& position ) {
 }
 
 /* return the neighbouring chunks given a chunk position */
-std::array<Chunk*, 6>   Terrain::getNeighbouringChunks( const glm::vec3& position ) {
+const std::array<Chunk*, 6>   Terrain::getNeighbouringChunks( const glm::vec3& position ) const {
     return {
-        (chunks.find({position+glm::vec3(1,0,0)}) != chunks.end() ? chunks[{position+glm::vec3(1,0,0)}] : nullptr),
-        (chunks.find({position-glm::vec3(1,0,0)}) != chunks.end() ? chunks[{position-glm::vec3(1,0,0)}] : nullptr),
-        (chunks.find({position+glm::vec3(0,1,0)}) != chunks.end() ? chunks[{position+glm::vec3(0,1,0)}] : nullptr),
-        (chunks.find({position-glm::vec3(0,1,0)}) != chunks.end() ? chunks[{position-glm::vec3(0,1,0)}] : nullptr),
-        (chunks.find({position+glm::vec3(0,0,1)}) != chunks.end() ? chunks[{position+glm::vec3(0,0,1)}] : nullptr),
-        (chunks.find({position-glm::vec3(0,0,1)}) != chunks.end() ? chunks[{position-glm::vec3(0,0,1)}] : nullptr)
+        (chunks.find({position+glm::vec3(1,0,0)}) != chunks.end() ? chunks.at({position+glm::vec3(1,0,0)}) : nullptr),
+        (chunks.find({position-glm::vec3(1,0,0)}) != chunks.end() ? chunks.at({position-glm::vec3(1,0,0)}) : nullptr),
+        (chunks.find({position+glm::vec3(0,1,0)}) != chunks.end() ? chunks.at({position+glm::vec3(0,1,0)}) : nullptr),
+        (chunks.find({position-glm::vec3(0,1,0)}) != chunks.end() ? chunks.at({position-glm::vec3(0,1,0)}) : nullptr),
+        (chunks.find({position+glm::vec3(0,0,1)}) != chunks.end() ? chunks.at({position+glm::vec3(0,0,1)}) : nullptr),
+        (chunks.find({position-glm::vec3(0,0,1)}) != chunks.end() ? chunks.at({position-glm::vec3(0,0,1)}) : nullptr)
     };
 }
 
@@ -112,21 +112,21 @@ void    Terrain::updateChunks( const glm::vec3& cameraPosition ) {
         std::array<Chunk*, 6> neighbours = this->getNeighbouringChunks(elem.chunk);
         ckey_t key = { elem.chunk };
         if (elem.action == updateType::water)
-            this->chunks[key]->computeWater(neighbours);
+            this->chunks.at(key)->computeWater(neighbours);
         if (elem.action == updateType::light)
-            this->chunks[key]->computeLight(neighbours, (neighbours[2] != nullptr ? neighbours[2]->getLightMask() : nullptr) );
-        this->chunks[key]->rebuildMesh();
+            this->chunks.at(key)->computeLight(neighbours, (neighbours[2] != nullptr ? neighbours[2]->getLightMask() : nullptr) );
+        this->chunks.at(key)->rebuildMesh();
 
         for (int i = 0; i < 6; i++) {
             if (neighbours[i] != nullptr && elem.chunk + neighboursOffsets[i] != elem.from) {
-                if ((this->chunks[key]->waterOnBorders & (0x1 << i)) != 0)
+                if ((this->chunks.at(key)->getSidesWaterUpdate() & (0x1 << i)) != 0)
                     this->chunksToUpdateQueue.push({ elem.chunk + neighboursOffsets[i], elem.chunk, updateType::water });
-                if ((this->chunks[key]->lightOnBorders & (0x1 << i)) != 0)
+                if ((this->chunks.at(key)->getSidesLightUpdate() & (0x1 << i)) != 0)
                     this->chunksToUpdateQueue.push({ elem.chunk + neighboursOffsets[i], elem.chunk, updateType::light });
             }
         }
         double delta = (static_cast<tMilliseconds>(std::chrono::high_resolution_clock::now() - lastTime)).count();
-        if (delta > 10.0)//this->maxAllocatedTimePerFrame)
+        if (delta > 10.0)
             break;
     }
 
@@ -142,7 +142,7 @@ void    Terrain::updateChunks( const glm::vec3& cameraPosition ) {
             continue;
         /* generate terrain and create chunk */
         glm::vec3 position = key.p * (glm::vec3)this->chunkSize;
-        this->renderChunkGeneration(position, this->dataBuffer);
+        this->renderChunkGeneration(position);
         this->chunks.insert( { key, new Chunk(position, this->chunkSize, this->dataBuffer, this->dataMargin) } );
         /* issue update to light and water */
         this->chunksToUpdateQueue.push({ key.p, key.p, updateType::water });
@@ -153,6 +153,10 @@ void    Terrain::updateChunks( const glm::vec3& cameraPosition ) {
             break;
     }
     // std::cout << (static_cast<tMilliseconds>(std::chrono::high_resolution_clock::now() - lastTime)).count() << std::endl;
+
+    /* Debug list sizes */
+    std::cout << "---\n" << "    chunks: " << chunks.size() << "\n" << "    update: " << chunksToUpdateQueue.size() << "\n" << \
+    "load queue: " << chunksToLoadQueue.size() << "\n" << "  load set: " << chunksToLoadSet.size() << "\n" << std::endl;
 
     this->deleteOutOfRangeChunks();
 }
@@ -166,13 +170,13 @@ void    Terrain::deleteOutOfRangeChunks( void ) {
             num++;
         }
     for (auto it = toDelete.begin(); it != toDelete.end(); ++it) {
-        delete this->chunks[*it];
-        this->chunks.erase( *it );
+        delete this->chunks.at(*it);
+        this->chunks.erase(*it);
     }
     toDelete.clear();
 }
 
-void    Terrain::renderChunkGeneration( const glm::vec3& position, uint8_t* data ) {
+void    Terrain::renderChunkGeneration( const glm::vec3& position ) {
     GLint m_viewport[4];
     glGetIntegerv(GL_VIEWPORT, m_viewport);
     /* configure the framebuffer */
@@ -201,7 +205,7 @@ void    Terrain::renderChunkGeneration( const glm::vec3& position, uint8_t* data
         glReadPixels(0, 0, this->chunkGenerationFbo.width, this->chunkGenerationFbo.height, GL_RED, GL_UNSIGNED_BYTE, data);
     #else
         glBindTexture(GL_TEXTURE_2D, this->chunkGenerationFbo.id);
-        glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_UNSIGNED_BYTE, data);
+        glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_UNSIGNED_BYTE, this->dataBuffer);
         glBindTexture(GL_TEXTURE_2D, 0);
     #endif
 

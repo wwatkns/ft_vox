@@ -44,7 +44,7 @@ GLuint  loadTexture( const char* filename, GLuint textureMode ) {
     glGenTextures(1, &textureID);
 
     int width, height, channels;
-    unsigned char*  data = stbi_load(filename, &width, &height, &channels, 0);
+    unsigned char* data = stbi_load(filename, &width, &height, &channels, 0);
 
     if (data) {
         GLenum format;
@@ -99,10 +99,6 @@ GLuint  loadTextureSrgb( const char* filename, GLuint textureMode ) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, textureMode);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, textureMode);
-
-        // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
-        // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 4); // 4 because textures are 16*16, which is 2^4
         stbi_image_free(data);
     }
     else {

@@ -17,10 +17,9 @@ INC_PATH = ./include/ \
 		   $(LIB_PATH)$(LIB_GLM_NAME)/ \
 		   $(LIB_PATH)$(LIB_ASSIMP_NAME)/include/ \
 		   $(LIB_PATH)$(LIB_FNS_NAME)/ \
-		#    $(LIB_PATH)$(LIB_TBB_NAME)/include/tbb/
 
 CC_FLGS = -std=c++11 -Ofast
-CC_LIBS = -lassimp -lglfw3 -framework AppKit -framework OpenGL -framework IOKit -framework CoreVideo#-ltbb
+CC_LIBS = -lassimp -lglfw3 -framework AppKit -framework OpenGL -framework IOKit -framework CoreVideo
 
 SRC_NAME = main.cpp PostProcess.cpp Light.cpp Cubemap.cpp Terrain.cpp Chunk.cpp \
 		   Camera.cpp Controller.cpp Env.cpp Renderer.cpp Shader.cpp utils.cpp

@@ -5,8 +5,8 @@ Chunk::Chunk( const glm::vec3& position, const glm::ivec3& chunkSize, const uint
     this->createModelTransform(position);
     this->paddedSize = chunkSize + static_cast<int>(margin);
     this->y_step = paddedSize.x * paddedSize.z;
-    this->waterOnBorders = 0;
-    this->lightOnBorders = 0;
+    this->sidesWaterUpdate = 0;
+    this->sidesLightUpdate = 0;
     this->firstLightPass = true;
 
     this->texture = static_cast<uint8_t*>(malloc(sizeof(uint8_t) * paddedSize.x * paddedSize.y * paddedSize.z));
@@ -183,7 +183,6 @@ void    Chunk::buildMesh( void ) {
         for (int z = 0; z < chunkSize.z; ++z)
             for (int x = 0; x < chunkSize.x; ++x) {
                 int i = (x+m) + (z+m) * paddedSize.x + (y+m) * this->y_step;
-                int j = x + z * chunkSize.x + y * chunkSize.x * chunkSize.z;
                 if (!isVoxelTransparent(i) && !isVoxelCulled(i)) { /* if voxel is not transparent and not culled */
                     uint8_t visibleFaces = getVisibleFaces(i);
                     uint8_t b = static_cast<uint8_t>(this->texture[i] - 1);
@@ -195,6 +194,7 @@ void    Chunk::buildMesh( void ) {
                                 ((int)lightMap[i + paddedSize.x] << 12) | ((int)lightMap[i - paddedSize.x] <<  8) |
                                 ((int)lightMap[i + this->y_step] <<  4) | ((int)lightMap[i - this->y_step]);
                     this->mesh_opaque.voxels.push_back( (point_t){ glm::vec3(x, y, z), ao, b, visibleFaces, light } );
+                    // add voxel bit mod, for modifiers like underwater (to paint voxel in blue)
                 }
                 else if (this->texture[i] == 15) {// && !isVoxelCulledTransparent(i)) { /* if voxel is water */
                     uint8_t visibleFaces = 255;//0x03;
@@ -235,7 +235,6 @@ const bool  Chunk::isMaskZero( const uint8_t* mask ) {
 void    Chunk::computeLight( std::array<Chunk*, 6> neighbouringChunks, const uint8_t* aboveLightMask ) {
     const int m = this->margin / 2;
     std::queue<int>   lightNodes;
-    // static bool firstPass = true;
 
     if (this->firstLightPass == true) { /* only do on first pass */
         if (aboveLightMask != nullptr) {
@@ -292,7 +291,7 @@ void    Chunk::computeLight( std::array<Chunk*, 6> neighbouringChunks, const uin
                     }
                 }
             }
-    this->lightOnBorders = 0;
+    this->sidesLightUpdate = 0;
     /* propagation pass */
     while (lightNodes.empty() == false) {
         int index = lightNodes.front();
@@ -305,7 +304,7 @@ void    Chunk::computeLight( std::array<Chunk*, 6> neighbouringChunks, const uin
                 lightNodes.push(index + offset[side]);
                 /* set bits for sides that are updated */
                 if (isBorder(index + offset[side]))
-                    this->lightOnBorders |= (0x1 << side);
+                    this->sidesLightUpdate |= (0x1 << side);
             }
         }
     }
@@ -348,7 +347,7 @@ void    Chunk::computeWater( std::array<Chunk*, 6> neighbouringChunks ) {
                           this->texture[i-this->y_step] == 0 ))
                     waterNodes.push(i);
             }
-    this->waterOnBorders = 0;
+    this->sidesWaterUpdate = 0;
     /* propagation pass */
     while (waterNodes.empty() == false) {
         int index = waterNodes.front();
@@ -359,7 +358,7 @@ void    Chunk::computeWater( std::array<Chunk*, 6> neighbouringChunks ) {
                 waterNodes.push(index + offset[side]);
                 /* set sides that were updated (to propagate to neighbours) */
                 if (isBorder(index + offset[side]))
-                    this->waterOnBorders |= (0x1 << side);
+                    this->sidesWaterUpdate |= (0x1 << side);
             }
         }
     }
@@ -429,7 +428,6 @@ void    Chunk::setupMesh( mesh_t* mesh, int mode ) {
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 }
-
 
 void    Chunk::createModelTransform( const glm::vec3& position ) {
     this->transform = glm::mat4();
