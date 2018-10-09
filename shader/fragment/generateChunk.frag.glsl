@@ -6,7 +6,7 @@ in vec2 TexCoords;
 
 uniform vec3 chunkPosition;
 uniform vec3 chunkSize;
-uniform float margin;
+uniform int margin;
 uniform sampler2D noiseSampler;
 
 #define PI 3.14159265359
@@ -50,24 +50,21 @@ float   fbm3d(in vec3 st, in float amplitude, in float frequency, in int octaves
     return value;
 }
 
-// float   voronoi2d(vec2 uv, float scale) {
-//     uv *= scale;
-//     // Tile the space
-//     vec2 i_st = floor(uv);
-//     vec2 f_st = fract(uv);
-//     float m_dist = 1.;
-//     for (int y= -1; y <= 1; y++) {
-//         for (int x= -1; x <= 1; x++) {
-//             vec2 neighbor = vec2(float(x),float(y));     // Neighbor place in the grid
-//             vec2 point = random2(i_st + neighbor);       // Random position from current + neighbor place in the grid
-//             point = 0.5 + 0.5*sin(6.2831*point); // Animate the point
-//             vec2 diff = neighbor + point - f_st;         // Vector between the pixel and the point
-//             float dist = length(diff);                   // Distance to the point
-//             m_dist = min(m_dist, dist);                  // Keep the closer distance
-//         }
-//     }
-//     return m_dist;
-// }
+vec2    voronoi2d( vec2 x ) {
+    vec2 n = floor(x);
+    vec2 f = fract(x);
+	vec3 m = vec3(8.0);
+    for (int j=-1; j<=1; j++)
+    for (int i=-1; i<=1; i++) {
+        vec2 g = vec2(i, j);
+        vec2 o = random2(n + g);
+        vec2 r = g - f + o;
+        float d = dot(r, r);
+        if (d < m.x)
+            m = vec3(d, o);
+    }
+    return vec2(sqrt(m.x), m.y+m.z);
+}
 
 #define AIR 0.
 #define DIRT 1/255.
@@ -95,18 +92,12 @@ float   map(vec3 p) {
     /* bedrock level */
     if (p.y == 0 || fbm3d(p, 1.0, 20.0, 2, 1.5, 0.5) > p.y/3.)
         return BEDROCK;
-    /* terrain and caves */
+    /* terrain */
     int g0 = int(fbm3d(p, 0.4, 0.0075, 6, 1.7, 0.5) > p.y / 340.); /*  low-frequency landscape */
     int g1 = int(fbm3d(p, 0.5, 0.0215, 4, 1.4, 0.5) > p.y / 340.); /* high-frequency landscape */
-
-    // int g2 = int( (1-abs( fbm3d(vec3(p.x-5,  p.y, p.z + 21.), 0.5, 0.03, 5, 1.9, 0.48) * 2.-1.)) * 
-                //   (1-abs( fbm3d(vec3(p.z, p.y+4., p.x - 42.), 0.5, 0.03, 5, 1.9, 0.48) * 2.-1.)) < 0.9);
-    // int g2 = int( (1-abs( fbm3d(vec3(p.x-5,  p.y, p.z + 21.), 0.48, 0.033, 6, 1.7, 0.48) * 2.-1.)) * 
-                //   (1-abs( fbm3d(vec3(p.z, p.y+4., p.x - 42.), 0.48, 0.030, 6, 0.7, 0.49) * 2.-1.)) < 0.92);
-    // int g2 = int( (1-abs( fbm3d(vec3(p.x*0.5-5, p.y, p.z + 21.), 0.48, 0.037, 6, 1.3, 0.45) * 2.-1.)) * 
-                //   (1-abs( fbm3d(vec3(p.z*0.5, p.y+4., p.x - 42.), 0.48, 0.035, 6, 0.7, 0.45) * 2.-1.)) < 0.92);
-    int g2 = int( (1-abs( fbm3d(vec3(p.x-5,  p.y, p.z + 21.), 0.44, 0.067, 6, 1.3, 0.49) * 2.-1.)) * 
-                  (1-abs( fbm3d(vec3(p.z, p.y+4., p.x - 42.), 0.44, 0.065, 6, 0.7, 0.49) * 2.-1.)) < 0.91);
+    /* caves */
+    int g2 = int( (1-abs( fbm3d(vec3(p.x-5, p.y*1.1   , p.z + 21.), 0.45, 0.067, 5, 1.3, 0.49) * 2.-1.)) * 
+                  (1-abs( fbm3d(vec3(p.z  , p.y*1.1+4., p.x - 42.), 0.45, 0.046, 5, 0.9, 0.49) * 2.-1.)) < 0.91);
     int g13 = int(fbm3d(p, 0.44, 0.04, 6, 2.0, 0.3) < 0.5);
     /* resource distribution */
     int g3 = int(fbm3d(p+340., 0.35, 0.20, 3, 1.5, 0.37) < 0.1 && p.y < 130);/* coal */
@@ -126,10 +117,7 @@ float   map(vec3 p) {
     /* trees */
     // int g14= int(fbm2d(p.xz, 0.25, 0.01, 4, 2.7, 0.2) < 0.5);
     //    g14&= int(fbm2d(p.xz, 0.47, 0.25, 4, 2.5, 0.1) < 0.5);
-
     /* water source */
-    // int g15= int(fbm3d(p, 0.2, 0.009, 4, 0.0, 0.7) > 0.5);
-    // int g15= int(fbm3d(p, 0.055, 0.05, 4, 2.0, 1.5) > (p.y/255.)  );//p.y / 340.);
     int g15= int(p.y == 85) * (g2 & g13);
 
     res = float(g0 & g1 & g2 & g13) * DIRT;
@@ -146,8 +134,6 @@ float   map(vec3 p) {
     // res = (res == DIRT && g14 == 0 ? OAK_WOOD : res);
     res = (res == AIR && g15 == 1 ? WATER : res );
 
-    // res = (g2) * COAL; // tmp
-    // res = g9 * GRAVEL; // tmp
     return res;
 }
 
@@ -160,14 +146,11 @@ void    main() {
     vec3 pos = vec3(c_uv, z);
 
     ivec3 border = ivec3(chunkSize-1);
-    if ((margin/2-1 <= pos.x && pos.x < border.x) && (margin/2-1 <= pos.y && pos.y < border.y) && (margin/2-1 <= pos.z && pos.z < border.z)) { /* ignore outer margins */
-        vec3 worldPos = (chunkPosition + pos - margin*0.5);
-        FragColor.r = sqrt(map(worldPos)); // values from [0..255] (0..1) are in normalized fixed-point representation, a simple sqrt() fixes that.
+    int low = margin/2-1;
+    if ((low <= pos.x && pos.x < border.x) && (low <= pos.y && pos.y < border.y) && (low <= pos.z && pos.z < border.z)) { /* ignore outer margins */
+        vec3 worldPos = (chunkPosition + pos - float(margin)*0.5);
+        FragColor.r = sqrt(map(worldPos)); /* values from [0..255] (0..1) are in normalized fixed-point representation, a simple sqrt() fixes that. */
     }
     else /* border value (255) */
         FragColor.r = 1.0;
-
-    // FragColor.r = sqrt(int(sin(worldPos.y/16.+0.5*PI)*sin(worldPos.x/16.+0.5*PI)*0.5+0.5 < worldPos.z/32.) * STONE); // Z
-    // FragColor.r = sqrt(int(sin(worldPos.y/16.+0.5*PI)*sin(worldPos.z/16.+0.5*PI)*0.5+0.5 < worldPos.x/32.) * STONE); // X
-    // FragColor.r = sqrt(int(sin(worldPos.x/16.+0.5*PI)*sin(worldPos.z/16.+0.5*PI)*0.5+0.5 > worldPos.y/32.) * STONE); // Y
 }

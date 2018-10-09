@@ -38,6 +38,15 @@ const bool  Chunk::isVoxelTransparent( int i ) const {
     return (this->texture[i] == 0 || this->texture[i] == 15);
 }
 
+const uint8_t Chunk::getUnderwaterfaces( int i ) const {
+    return ((texture[i - this->y_step] == 15) << 0) | // bottom
+           ((texture[i + this->y_step] == 15) << 1) | // top
+           ((texture[i - paddedSize.x] == 15) << 2) | // back
+           ((texture[i + paddedSize.x] == 15) << 3) | // front
+           ((texture[i - 1           ] == 15) << 4) | // left
+           ((texture[i + 1           ] == 15) << 5);  // right
+}
+
 const uint8_t Chunk::getVisibleFaces( int i ) const {
     return (isVoxelTransparent(i + 1           ) << 5) | // right
            (isVoxelTransparent(i - 1           ) << 4) | // left
@@ -193,18 +202,12 @@ void    Chunk::buildMesh( void ) {
                     int light = ((int)lightMap[i + 1           ] << 20) | ((int)lightMap[i - 1           ] << 16) |
                                 ((int)lightMap[i + paddedSize.x] << 12) | ((int)lightMap[i - paddedSize.x] <<  8) |
                                 ((int)lightMap[i + this->y_step] <<  4) | ((int)lightMap[i - this->y_step]);
-                    // extra bit debug (faces underwater, 6bits)
-                    if (texture[i - this->y_step] == 15) light |= (0x1 << 24); // bottom
-                    if (texture[i + this->y_step] == 15) light |= (0x1 << 25); // top
-                    if (texture[i - paddedSize.x] == 15) light |= (0x1 << 26); // back
-                    if (texture[i + paddedSize.x] == 15) light |= (0x1 << 27); // front
-                    if (texture[i - 1           ] == 15) light |= (0x1 << 28); // left
-                    if (texture[i + 1           ] == 15) light |= (0x1 << 29); // right
+                    light |= this->getUnderwaterfaces(i) << 24; // extra infos for debug (faces underwater, 6bits)
                     this->mesh_opaque.voxels.push_back( (point_t){ glm::vec3(x, y, z), ao, b, visibleFaces, light } );
                     // add voxel bit mod, for modifiers like underwater (to paint voxel in blue)
                 }
                 else if (this->texture[i] == 15 && !isVoxelCulledTransparent(i)) { /* if voxel is water */
-                    uint8_t visibleFaces = 0x03; // we won't see the surface from under
+                    uint8_t visibleFaces = 0x03;
                     uint8_t b = static_cast<uint8_t>(this->texture[i] - 1);
                     glm::ivec2 ao = getVerticesAoValue(i, visibleFaces);
                     int light = ((int)lightMap[i + 1           ] << 20) | ((int)lightMap[i - 1           ] << 16) |
@@ -337,10 +340,10 @@ void    Chunk::computeWater( const std::array<Chunk*, 6>& neighbouringChunks ) {
                 int i = (x+m) + (z+m) * paddedSize.x + (y+m) * this->y_step;
                 /* handle neighbouring chunks */
                 if (x == -1 || y == -1 || z == -1 || x == chunkSize.x || y == chunkSize.y || z == chunkSize.z) {
-                    int side = 6;
-                    if (x == chunkSize.x) side = 0; else if (x == -1) side = 1;
-                    if (y == chunkSize.y) side = 2; else if (y == -1) side = 3;
-                    if (z == chunkSize.z) side = 4; else if (z == -1) side = 5;
+                    int side = (x == chunkSize.x ? 0 : (x == -1 ? 1 : (y == chunkSize.y ? 2 : (y == -1 ? 3 : (z == chunkSize.z ? 4 : (z == -1 ? 5 : 6))))));
+                    // if (x == chunkSize.x) side = 0; else if (x == -1) side = 1;
+                    // if (y == chunkSize.y) side = 2; else if (y == -1) side = 3;
+                    // if (z == chunkSize.z) side = 4; else if (z == -1) side = 5;
 
                     if (neighbouringChunks[side] != nullptr && side < 6) {
                         if ((int)neighbouringChunks[side]->getTexture()[i + offsetInv[side]] == 15) {
@@ -386,7 +389,7 @@ void    Chunk::render( Shader shader, Camera& camera, GLuint textureAtlas, uint 
         /* set transform matrix */
         shader.setMat4UniformValue("_mvp", camera.getViewProjectionMatrix() * this->transform);
         shader.setMat4UniformValue("_model", this->transform);
-        shader.setIntUniformValue("underwater", underwater);
+        shader.setIntUniformValue("cameraUnderwater", underwater);
         /* texture atlas */
         glActiveTexture(GL_TEXTURE0);
         shader.setIntUniformValue("atlas", 0);

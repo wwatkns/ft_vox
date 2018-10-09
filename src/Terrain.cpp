@@ -150,7 +150,7 @@ void    Terrain::updateChunks( const glm::vec3& cameraPosition ) {
     // std::cout << (static_cast<tMilliseconds>(std::chrono::high_resolution_clock::now() - lastTime)).count() << std::endl;
 
     /* Debug list sizes */
-    std::cout << "---\n" << "    chunks: " << chunks.size() << "\n" << "    update: " << chunksToUpdateQueue.size() << "\n" << \
+    std::cout << ">   chunks: " << chunks.size() << "\n" << "    update: " << chunksToUpdateQueue.size() << "\n" << \
     "load queue: " << chunksToLoadQueue.size() << "\n" << "  load set: " << chunksToLoadSet.size() << "\n" << std::endl;
 
     this->deleteOutOfRangeChunks();
@@ -206,7 +206,7 @@ void    Terrain::renderChunkGeneration( const glm::vec3& position ) {
     this->chunkGenerationShader->setFloatUniformValue("near", 0.1f); // get near from camera
     this->chunkGenerationShader->setVec3UniformValue("chunkPosition", position);
     this->chunkGenerationShader->setVec3UniformValue("chunkSize", glm::vec3(this->chunkSize + (int)this->dataMargin) );
-    this->chunkGenerationShader->setFloatUniformValue("margin", (float)this->dataMargin );
+    this->chunkGenerationShader->setIntUniformValue("margin", this->dataMargin );
     glActiveTexture(GL_TEXTURE0);
     this->chunkGenerationShader->setIntUniformValue("noiseSampler", 0);
     glBindTexture(GL_TEXTURE_2D, this->noiseSampler);

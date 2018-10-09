@@ -88,6 +88,7 @@ private:
     const bool          isVoxelTransparent( int i ) const;
     const bool          isVoxelCulled( int i ) const;
     const bool          isVoxelCulledTransparent( int i ) const;
+    const uint8_t       getUnderwaterfaces( int i ) const;
     const uint8_t       getVisibleFaces( int i ) const;
     const uint8_t       getVisibleFacesTransparent( int i ) const;
     glm::ivec2          getVerticesAoValue( int i, uint8_t visibleFaces ) const;

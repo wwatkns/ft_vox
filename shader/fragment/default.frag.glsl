@@ -30,13 +30,13 @@ in vec2 TexCoords;
 flat in int Id;
 in float Ao;
 in float Light;
-flat in int Underwater; // TMP
+flat in int Underwater; // underwater faces
 
 /* uniforms */
 uniform sampler2D atlas;
 uniform vec3 cameraPos;
 uniform sDirectionalLight directionalLight;
-uniform int underwater; // NEW
+uniform int cameraUnderwater;
 
 sMaterial material = sMaterial(
     vec3(0.4),
@@ -91,7 +91,7 @@ void main() {
         // FragColor = vec4((getBlocTexture().xyz + 0.2) * Ao * (Light*0.9+0.1), (Id == 14 ? 0.65 : 1.0) ); return;	
     // }
     // FragColor = vec4(getBlocTexture().xyz * Ao * (pow(Light, 1.5)*0.95+0.05), (Id == 14 ? 0.65 : 1.0) );
-    FragColor = vec4(getBlocTexture().xyz * Ao * (pow(Light, 1.5)*0.95+0.05), (Id == 14 ? (underwater==1?0.85:0.43) : 1.0) );
+    FragColor = vec4(getBlocTexture().xyz * Ao * result * (pow(Light, 1.5)*0.5+0.5), (Id == 14 ? (cameraUnderwater==1?0.85:0.43) : 1.0) );
     // FragColor = vec4(getBlocTexture().xyz * Ao * (pow(Light, 1.5)*0.5+0.5), (Id == 14 ? 0.65 : 1.0) );
     // FragColor = vec4(getBlocTexture().xyz * Ao * (Light*0.8+0.2), (Id == 14 ? 0.65 : 1.0) );
 
@@ -99,9 +99,10 @@ void main() {
     if (Underwater == 1)
         FragColor = FragColor * vec4(0.5, 0.53, 1., 1);
     /* if we're underwater, add blue effect */
-    if (underwater == 1) {
+    if (cameraUnderwater == 1) {
         float d = max(1-min(8./distance(cameraPos, FragPos), 1), 0.15);
-        FragColor += vec4(-d*0.03, d*0.01, d*0.1, 0);
+        FragColor += vec4(-d*0.03, d*0.01, d*0.1, 0); // tint
+        FragColor = mix(FragColor, vec4(0.1, 0.2, 1, 1), max(1-min(30./distance(cameraPos, FragPos), 1), 0.0)); // fog
     }
 }
 
