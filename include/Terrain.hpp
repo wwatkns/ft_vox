@@ -101,8 +101,8 @@ public:
     void                        generateChunkMeshes( void );
     void                        computeChunkLight( void );
 
-    const glm::vec3                   getChunkPosition( const glm::vec3& position ) const;
-    const std::array<Chunk*, 6>       getNeighbouringChunks( const glm::vec3& position ) const;
+    const glm::vec3             getChunkPosition( const glm::vec3& position ) const;
+    const std::array<Chunk*, 6> getNeighbouringChunks( const glm::vec3& position ) const;
 
 private:
     std::unordered_map<ckey_t, Chunk*, KeyHash> chunks;

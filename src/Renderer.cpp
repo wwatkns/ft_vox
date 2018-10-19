@@ -11,7 +11,6 @@ camera(80, (float)env->getWindow().width / (float)env->getWindow().height, 0.1f,
     this->lastTime = std::chrono::steady_clock::now();
     this->framerate = 60.0;
 
-    // this->initDepthMap();
     this->fxaa = false;
     if (this->fxaa)
         this->initFramebuffer();
@@ -34,7 +33,7 @@ void	Renderer::loop( void ) {
         glfwPollEvents();
         this->env->getController()->update();
         this->camera.handleInputs(this->env->getController()->getKeys(), this->env->getController()->getMouse());
-        tTimePoint lastTime = std::chrono::high_resolution_clock::now();
+        timepoint_t lastTime = std::chrono::high_resolution_clock::now();
 
         if (this->fxaa) {
             /* two pass rendering (for FXAA) */
@@ -59,14 +58,12 @@ void	Renderer::loop( void ) {
         glfwSwapBuffers(this->env->getWindow().ptr);
         /* test, update the chunks after rendering */
         this->env->getTerrain()->updateChunks(this->camera.getPosition());
-        // std::cout << (static_cast<tMilliseconds>(std::chrono::high_resolution_clock::now() - lastTime)).count() << std::endl;
-
-        /* DEBUG */
+        // std::cout << (static_cast<milliseconds_t>(std::chrono::high_resolution_clock::now() - lastTime)).count() << std::endl;
 
         /* display framerate */
-        // tTimePoint current = std::chrono::high_resolution_clock::now();
+        // timepoint_t current = std::chrono::high_resolution_clock::now();
         // frames++;
-        // if ((static_cast<tMilliseconds>(current - this->lastTime)).count() > 999) {
+        // if ((static_cast<milliseconds_t>(current - this->lastTime)).count() > 999) {
         //     // std::cout << frames << " fps" << std::endl;
         //     this->lastTime = current;
         //     frames = 0;
@@ -92,7 +89,6 @@ void    Renderer::renderMeshes( void ) {
     this->shader["default"]->use();
     this->shader["default"]->setVec3UniformValue("cameraPos", this->camera.getPosition());
     this->shader["default"]->setVec3UniformValue("viewPos", this->camera.getPosition());
-    // this->shader["default"]->setMat4UniformValue("lightSpaceMat", this->lightSpaceMat);
 
     this->env->getTerrain()->renderChunks(*this->shader["default"], this->camera);
 
@@ -101,11 +97,6 @@ void    Renderer::renderMeshes( void ) {
         // this->env->getTerrain()->updateChunks(this->camera.getPosition());
         // check = true;
     // }
-    
-    /* copy the depth buffer to a texture (used in raymarch shader for geometry occlusion of raymarched objects) */
-    // glBindTexture(GL_TEXTURE_2D, this->depthMap.id);
-    // glReadBuffer(GL_FRONT);
-    // glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, 0, 0, this->depthMap.width, this->depthMap.height, 0);
 }
 
 void    Renderer::renderSkybox( void ) {
@@ -127,30 +118,6 @@ void    Renderer::renderPostFxaa( void ) {
     this->shader["fxaa"]->setVec2UniformValue("win_size", glm::vec2(this->env->getWindow().width, this->env->getWindow().height));
     this->env->getPostProcess()->render(*this->shader["fxaa"], this->framebuffer.id);
     glEnable(GL_DEPTH_TEST);
-}
-
-void    Renderer::initDepthMap( void ) {
-    this->depthMap.width = this->env->getWindow().width;
-    this->depthMap.height = this->env->getWindow().height;
-
-    glGenFramebuffers(1, &this->depthMap.fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, this->depthMap.fbo);
-    /* create depth texture */
-    glGenTextures(1, &this->depthMap.id);
-    glBindTexture(GL_TEXTURE_2D, this->depthMap.id);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, this->depthMap.width, this->depthMap.height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); // GL_NEAREST
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-    float borderColor[] = { 1.0, 1.0, 1.0, 1.0 };
-    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
-    // attach depth texture as FBO's depth buffer
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, this->depthMap.id, 0);
-    glDrawBuffer(GL_NONE);
-    glReadBuffer(GL_NONE);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void    Renderer::initFramebuffer( void ) {

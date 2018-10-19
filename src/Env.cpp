@@ -5,13 +5,12 @@ Env::Env( void ) {
     try {
         this->initGlfwEnvironment("4.0");
         // this->initGlfwWindow(720, 480); /* 1280x720 */
-        this->initGlfwWindow(960, 540); /* 1920x1080 */
-        // this->initGlfwWindow(1280, 720); /* 2560x1440 */
+        // this->initGlfwWindow(960, 540); /* 1920x1080 */
+        this->initGlfwWindow(1280, 720); /* 2560x1440 */
         if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
             throw Exception::InitError("glad initialization failed");
         this->controller = new Controller(this->window.ptr);
 
-        // this->terrain = new Terrain(64, 256); /* mandatory part */
         this->terrain = new Terrain(160, 256); /* mandatory part */
         // this->terrain = new Terrain(224, 256); /* Bonus part for render distance */
 

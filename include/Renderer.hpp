@@ -20,17 +20,11 @@
 #include "Shader.hpp"
 #include "Camera.hpp"
 #include "Light.hpp"
+#include "Terrain.hpp"
 
-typedef struct  sDepthMap {
-    unsigned int    id;
-    unsigned int    fbo;
-    size_t          width;
-    size_t          height;
-}               tDepthMap;
-
-typedef std::unordered_map<std::string, Shader*> tShaderMap;
-typedef std::chrono::duration<double,std::milli> tMilliseconds;
-typedef std::chrono::steady_clock::time_point tTimePoint;
+typedef std::unordered_map<std::string, Shader*> shadermap_t;
+typedef std::chrono::duration<double,std::milli> milliseconds_t;
+typedef std::chrono::steady_clock::time_point timepoint_t;
 
 class Renderer {
 
@@ -39,7 +33,6 @@ public:
     ~Renderer( void );
 
     void	loop( void );
-    void    updateShadowDepthMap( void );
     void    renderLights( void );
     void    renderMeshes( void );
     void    renderSkybox( void );
@@ -48,16 +41,14 @@ public:
 private:
     Env*            env;
     Camera          camera;
-    tShaderMap      shader;
-    tDepthMap       depthMap;       /* custom depth-map */
-    tDepthMap       framebuffer;
+    shadermap_t     shader;
+    framebuffer_t   framebuffer;
     glm::mat4       lightSpaceMat;
     float           framerate;
     bool            fxaa;
 
-    tTimePoint      lastTime;
+    timepoint_t     lastTime;
 
-    void    initDepthMap( void );
     void    initFramebuffer( void );
 
 };

@@ -340,10 +340,10 @@ void    Chunk::computeWater( const std::array<Chunk*, 6>& neighbouringChunks ) {
                 int i = (x+m) + (z+m) * paddedSize.x + (y+m) * this->y_step;
                 /* handle neighbouring chunks */
                 if (x == -1 || y == -1 || z == -1 || x == chunkSize.x || y == chunkSize.y || z == chunkSize.z) {
-                    int side = (x == chunkSize.x ? 0 : (x == -1 ? 1 : (y == chunkSize.y ? 2 : (y == -1 ? 3 : (z == chunkSize.z ? 4 : (z == -1 ? 5 : 6))))));
-                    // if (x == chunkSize.x) side = 0; else if (x == -1) side = 1;
-                    // if (y == chunkSize.y) side = 2; else if (y == -1) side = 3;
-                    // if (z == chunkSize.z) side = 4; else if (z == -1) side = 5;
+                    int side = 6;
+                    if (x == chunkSize.x) side = 0; else if (x == -1) side = 1;
+                    if (y == chunkSize.y) side = 2; else if (y == -1) side = 3;
+                    if (z == chunkSize.z) side = 4; else if (z == -1) side = 5;
 
                     if (neighbouringChunks[side] != nullptr && side < 6) {
                         if ((int)neighbouringChunks[side]->getTexture()[i + offsetInv[side]] == 15) {
@@ -405,7 +405,6 @@ void    Chunk::render( Shader shader, Camera& camera, GLuint textureAtlas, uint 
         if (this->mesh_transparent.voxels.size() > 0) {
             /* perform small offset of mesh to have waterline a bit lower */
             glm::mat4 newTransform = this->transform;
-            // newTransform = glm::translate(newTransform, glm::vec3(0, -0.25, 0)); /* ISSUE: with face culling if we offset down or up */
             newTransform = glm::translate(newTransform, glm::vec3(0, underwater, 0)); /* HACK: back faces are off by 1 unit down, so if we're underwater, we raise water voxels by one so that water line is at "correct" height */
             shader.setMat4UniformValue("_mvp", camera.getViewProjectionMatrix() * newTransform);
             shader.setMat4UniformValue("_model", newTransform);
