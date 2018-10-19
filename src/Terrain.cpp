@@ -27,7 +27,7 @@ Terrain::~Terrain( void ) {
     glDeleteTextures(1, &this->textureAtlas);
     glDeleteTextures(1, &this->chunkGenerationFbo.id);
     /* clean buffers */
-    glDeleteBuffers(1, &this->chunkGenerationRenderingQuad.vao);
+    glDeleteVertexArrays(1, &this->chunkGenerationRenderingQuad.vao);
     glDeleteBuffers(1, &this->chunkGenerationRenderingQuad.vbo);
     glDeleteBuffers(1, &this->chunkGenerationRenderingQuad.ebo);
     delete this->chunkGenerationShader;

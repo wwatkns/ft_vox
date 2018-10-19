@@ -28,9 +28,9 @@ Chunk::~Chunk( void ) {
     this->lightMask = nullptr;
     free(this->lightMap);
     this->lightMap = nullptr;
-    glDeleteBuffers(1, &this->mesh_opaque.vao);
+    glDeleteVertexArrays(1, &this->mesh_opaque.vao);
     glDeleteBuffers(1, &this->mesh_opaque.vbo);
-    glDeleteBuffers(1, &this->mesh_transparent.vao);
+    glDeleteVertexArrays(1, &this->mesh_transparent.vao);
     glDeleteBuffers(1, &this->mesh_transparent.vbo);
 }
 
@@ -175,9 +175,9 @@ void    Chunk::rebuildMesh( void ) {
     if (this->meshed == true) {
         this->mesh_opaque.voxels.clear();
         this->mesh_transparent.voxels.clear();
-        glDeleteBuffers(1, &this->mesh_opaque.vao);
+        glDeleteVertexArrays(1, &this->mesh_opaque.vao);
         glDeleteBuffers(1, &this->mesh_opaque.vbo);
-        glDeleteBuffers(1, &this->mesh_transparent.vao);
+        glDeleteVertexArrays(1, &this->mesh_transparent.vao);
         glDeleteBuffers(1, &this->mesh_transparent.vbo);
     }
     this->buildMesh();

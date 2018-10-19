@@ -15,7 +15,7 @@ Cubemap::Cubemap( const std::vector<std::string>& paths ) {
 
 Cubemap::~Cubemap( void ) {
     glDeleteTextures(1, &this->textures[0]);
-    glDeleteBuffers(1, &this->vao);
+    glDeleteVertexArrays(1, &this->vao);
     glDeleteBuffers(1, &this->vbo);
     glDeleteBuffers(1, &this->ebo);
 }
